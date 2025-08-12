@@ -33,6 +33,23 @@ limitations under the License.
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <google.auto-value.version>1.10.4</google.auto-value.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.auto.value</groupId>
+                <artifactId>auto-value</artifactId>
+                <version>${google.auto-value.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.value</groupId>
+                <artifactId>auto-value-annotations</artifactId>
+                <version>${google.auto-value.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
 </project>

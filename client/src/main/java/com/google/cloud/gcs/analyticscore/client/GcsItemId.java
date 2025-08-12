@@ -15,16 +15,30 @@
  */
 package com.google.cloud.gcs.analyticscore.client;
 
-import java.net.URI;
-import java.nio.channels.SeekableByteChannel;
+import com.google.auto.value.AutoValue;
 
-interface GcsClient {
-    /** Opens a new read channel. */
-    SeekableByteChannel openReadChannel(GcsResourceInfo resourceInfo, GcsReadOptions readOptions);
+/**
+ * Represents an item identifier for a resource within Google Cloud Storage.
+ */
+@AutoValue
+abstract class GcsItemId {
 
-    /** Fetches object metadata. */
-    GcsResourceInfo getGcsResourceInfo(GcsResourceId resourceId);
+    // Name of the bucket.
+    abstract String getBucketName();
 
-    /** Close the client. */
-    void close();
+    // Name of the object in the bucket.
+    abstract String getObjectName();
+
+    static Builder builder() {
+        return new AutoValue_GcsItemId.Builder();
+    }
+
+    @AutoValue.Builder
+    abstract static class Builder {
+        abstract Builder setBucketName(String bucketName);
+
+        abstract Builder setObjectName(String objectName);
+
+        abstract GcsItemId build();
+    }
 }

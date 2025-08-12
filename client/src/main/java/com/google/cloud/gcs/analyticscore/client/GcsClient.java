@@ -15,5 +15,21 @@
  */
 package com.google.cloud.gcs.analyticscore.client;
 
-class GcsReadOptions {
+import java.nio.channels.SeekableByteChannel;
+
+interface GcsClient {
+    /**
+     * Opens a new read channel.
+     */
+    SeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions);
+
+    /**
+     * Fetches object metadata.
+     */
+    GcsItemInfo getGcsItemInfo(GcsItemId itemId);
+
+    /**
+     * Close the client.
+     */
+    void close();
 }
