@@ -34,6 +34,13 @@ limitations under the License.
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <google.auto-value.version>1.10.4</google.auto-value.version>
+        <google.cloud-storage.bom.version>2.52.2</google.cloud-storage.bom.version>
+        <google.guava.version>33.1.0-jre</google.guava.version>
+        <google.java-format.version>1.15.0</google.java-format.version>
+        <mockito.version>5.11.0</mockito.version>
+        <truth.version>1.4.2</truth.version>
+        <junit.jupiter.version>5.8.2</junit.jupiter.version>
+        <cloud.libraries.bom.version>26.65.0</cloud.libraries.bom.version>
     </properties>
 
     <dependencyManagement>
@@ -48,6 +55,38 @@ limitations under the License.
                 <groupId>com.google.auto.value</groupId>
                 <artifactId>auto-value-annotations</artifactId>
                 <version>${google.auto-value.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-storage-bom</artifactId>
+                <version>${google.cloud-storage.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${google.guava.version}</version>
+            </dependency>
+            <!--test dependencies-->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.truth</groupId>
+                <artifactId>truth</artifactId>
+                <version>${truth.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>${cloud.libraries.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

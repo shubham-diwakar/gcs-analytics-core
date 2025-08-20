@@ -17,6 +17,8 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
 
+import java.util.Optional;
+
 /**
  * Represents an item identifier for a resource within Google Cloud Storage.
  */
@@ -27,7 +29,7 @@ abstract class GcsItemId {
     abstract String getBucketName();
 
     // Name of the object in the bucket.
-    abstract String getObjectName();
+    abstract Optional<String> getObjectName();
 
     static Builder builder() {
         return new AutoValue_GcsItemId.Builder();
@@ -40,5 +42,9 @@ abstract class GcsItemId {
         abstract Builder setObjectName(String objectName);
 
         abstract GcsItemId build();
+    }
+
+    public boolean isGcsObject() {
+        return this.getBucketName() != null && !this.getObjectName().isEmpty();
     }
 }

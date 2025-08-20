@@ -23,10 +23,12 @@ import com.google.auto.value.AutoValue;
 @AutoValue
 public abstract class GcsFileSystemOptions {
 
-    /** Cloud Storage client to use. */
+    /**
+     * Cloud Storage client to use.
+     */
     public enum ClientType {
-      HTTP_CLIENT,
-      GRPC_CLIENT,
+        HTTP_CLIENT,
+        GRPC_CLIENT,
     }
 
     public abstract ClientType getClientType();

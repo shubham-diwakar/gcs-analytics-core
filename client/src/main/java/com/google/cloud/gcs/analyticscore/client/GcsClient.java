@@ -15,18 +15,20 @@
  */
 package com.google.cloud.gcs.analyticscore.client;
 
+import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 
 interface GcsClient {
     /**
      * Opens a new read channel.
      */
-    SeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions);
+    SeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions)
+            throws IOException;
 
     /**
      * Fetches object metadata.
      */
-    GcsItemInfo getGcsItemInfo(GcsItemId itemId);
+    GcsItemInfo getGcsItemInfo(GcsItemId itemId) throws IOException;
 
     /**
      * Close the client.

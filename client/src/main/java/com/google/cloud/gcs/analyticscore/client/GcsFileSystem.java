@@ -22,14 +22,14 @@ import java.nio.channels.SeekableByteChannel;
 
 public interface GcsFileSystem {
 
-   /**
+    /**
      * Opens an object for reading.
      *
-     * @param path Object full path of the form gs://bucket/object-path.
+     * @param path    Object full path of the form gs://bucket/object-path.
      * @param options Fine-grained read options for behaviors of retries, decryption, etc.
      * @return A channel for reading from the given object.
      * @throws FileNotFoundException if the given path does not exist.
-     * @throws IOException if object exists but cannot be opened.
+     * @throws IOException           if object exists but cannot be opened.
      */
     SeekableByteChannel open(URI path, GcsReadOptions options) throws IOException;
 
@@ -41,9 +41,13 @@ public interface GcsFileSystem {
      */
     GcsFileInfo getFileInfo(URI path) throws IOException;
 
-    /** Retrieve the options that were used to create this GcsFileSystem. */
+    /**
+     * Retrieve the options that were used to create this GcsFileSystem.
+     */
     GcsFileSystemOptions getOptions();
 
-    /** Retrieve the gcs client used to create this GcsFileSystem. */
+    /**
+     * Retrieve the gcs client used to create this GcsFileSystem.
+     */
     GcsClient getGcsClient();
 }

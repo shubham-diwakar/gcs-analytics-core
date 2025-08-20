@@ -17,41 +17,39 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
 
+import java.util.Optional;
+
 /**
- * Represents metadata of a GCS Item.
+ * Configuration options for the GCS client.
  */
 @AutoValue
-abstract class GcsItemInfo {
+abstract class GcsClientOptions {
 
-    abstract GcsItemId getItemId();
+    abstract Optional<String> getProjectId();
 
-    /**
-     * Size of an object in bytes. Returns -1 for items that do not exist.
-     */
-    abstract long getSize();
+    abstract Optional<String> getClientLibToken();
 
-    /**
-     * Generation ID of the object when the metadata is read.
-     */
-    abstract long getContentGeneration();
+    abstract Optional<String> getServiceHost();
+
+    abstract Optional<String> getUserAgent();
 
     static Builder builder() {
-        // By default, set size to -1, indicating a non-existent item.
-        return new AutoValue_GcsItemInfo.Builder().setSize(-1L);
+        return new AutoValue_GcsClientOptions.Builder();
     }
 
     /**
-     * Builder for {@link GcsItemInfo}.
+     * Builder for {@link GcsClientOptions}.
      */
     @AutoValue.Builder
     abstract static class Builder {
 
-        abstract Builder setItemId(GcsItemId itemId);
+        abstract Builder setProjectId(String projectId);
 
-        abstract Builder setSize(long size);
+        abstract Builder setClientLibToken(String clientLibToken);
 
-        abstract Builder setContentGeneration(long contentGeneration);
+        abstract Builder setServiceHost(String serviceHost);
 
-        abstract GcsItemInfo build();
+        abstract Builder setUserAgent(String userAgent);
+        abstract GcsClientOptions build();
     }
 }

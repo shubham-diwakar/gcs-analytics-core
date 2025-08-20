@@ -17,17 +17,19 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
 
+import java.util.Optional;
+
 /**
  * Configuration options for the GCS client.
  */
 @AutoValue
 public abstract class GcsReadOptions {
 
-    public abstract Integer getChunkSize();
+    public abstract Optional<Integer> getChunkSize();
 
-    public abstract String getDecryptionKey();
+    public abstract Optional<String> getDecryptionKey();
 
-    public abstract String getProjectId();
+    public abstract Optional<String> getProjectId();
 
     public static Builder builder() {
         return new AutoValue_GcsReadOptions.Builder();

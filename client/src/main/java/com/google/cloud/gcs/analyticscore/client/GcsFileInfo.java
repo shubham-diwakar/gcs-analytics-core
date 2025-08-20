@@ -16,6 +16,7 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
+
 import java.net.URI;
 import java.util.Map;
 
@@ -31,12 +32,13 @@ abstract class GcsFileInfo {
     abstract GcsItemInfo getItemInfo();
 
     /**
-    * Gets the path of this file or directory.
-    */
+     * Gets the path of this file or directory.
+     */
     abstract URI getUri();
 
     /**
      * Retrieve file attributes for this file.
+     *
      * @return A map of file attributes
      */
     abstract Map<String, byte[]> getAttributes();
@@ -50,9 +52,12 @@ abstract class GcsFileInfo {
      */
     @AutoValue.Builder
     abstract static class Builder {
-      abstract Builder setItemInfo(GcsItemInfo itemInfo);
-      abstract Builder setUri(URI uri);
-      abstract Builder setAttributes(Map<String, byte[]> attributes);
-      abstract GcsFileInfo build();
+        abstract Builder setItemInfo(GcsItemInfo itemInfo);
+
+        abstract Builder setUri(URI uri);
+
+        abstract Builder setAttributes(Map<String, byte[]> attributes);
+
+        abstract GcsFileInfo build();
     }
 }
