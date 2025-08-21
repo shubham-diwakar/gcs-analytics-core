@@ -27,8 +27,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.Test;
 
 class GcsReadChannelTest {
@@ -223,6 +224,20 @@ class GcsReadChannelTest {
 
         assertThat(gcsReadChannel.size()).isEqualTo(objectData.length());
     }
+
+    @Test
+    void readVectored_throwsNotImplementedException() throws IOException {
+        GcsItemId itemId = GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object").build();
+        String objectData = "hello world";
+        GcsItemInfo itemInfo =
+                GcsItemInfo.builder().setItemId(itemId).setSize(objectData.length()).setContentGeneration(0L).build();
+        createBlobInStorage(BlobId.of(itemId.getBucketName(), itemId.getObjectName().get(), 0L), objectData);
+        GcsReadChannel gcsReadChannel = new GcsReadChannel(storage, itemInfo, TEST_GCS_READ_OPTIONS);
+
+        assertThrows(NotImplementedException.class, () -> gcsReadChannel.readVectored(new ArrayList<>(),
+                ByteBuffer::allocate));
+    }
+
 
     private void createBlobInStorage(BlobId blobId, String blobContent) {
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();

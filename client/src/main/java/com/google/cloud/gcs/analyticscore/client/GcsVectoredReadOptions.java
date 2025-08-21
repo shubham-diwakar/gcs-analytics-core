@@ -20,36 +20,34 @@ import com.google.auto.value.AutoValue;
 import java.util.Optional;
 
 /**
- * Configuration options for the GCS client.
+ * Configuration options for Gcs vectored read.
  */
 @AutoValue
-public abstract class GcsClientOptions {
+public abstract class GcsVectoredReadOptions {
 
-    abstract Optional<String> getProjectId();
+    // The shortest distance allowed between chunks for them to be merged
+    abstract int getMinMergeDistance();
 
-    abstract Optional<String> getClientLibToken();
-
-    abstract Optional<String> getServiceHost();
-
-    abstract Optional<String> getUserAgent();
+    // The max allowed size of the combined chunk.
+    abstract int getMaxMergeSize();
 
     static Builder builder() {
-        return new AutoValue_GcsClientOptions.Builder();
+        return new AutoValue_GcsVectoredReadOptions
+                .Builder()
+                .setMinMergeDistance(4 * 1024) // 4 KB
+                .setMaxMergeSize(8 * 1024 * 1024); // 8 MB
     }
 
     /**
-     * Builder for {@link GcsClientOptions}.
+     * Builder for {@link GcsVectoredReadOptions}.
      */
     @AutoValue.Builder
     abstract static class Builder {
 
-        abstract Builder setProjectId(String projectId);
+        abstract Builder setMinMergeDistance(int minMergeDistance);
 
-        abstract Builder setClientLibToken(String clientLibToken);
+        abstract Builder setMaxMergeSize(int maxMergeSize);
 
-        abstract Builder setServiceHost(String serviceHost);
-
-        abstract Builder setUserAgent(String userAgent);
-        abstract GcsClientOptions build();
+        abstract GcsVectoredReadOptions build();
     }
 }

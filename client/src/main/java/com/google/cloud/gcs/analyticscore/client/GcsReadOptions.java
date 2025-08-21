@@ -20,7 +20,7 @@ import com.google.auto.value.AutoValue;
 import java.util.Optional;
 
 /**
- * Configuration options for the GCS client.
+ * Configuration options for the GCS read options.
  */
 @AutoValue
 public abstract class GcsReadOptions {
@@ -30,6 +30,8 @@ public abstract class GcsReadOptions {
     public abstract Optional<String> getDecryptionKey();
 
     public abstract Optional<String> getProjectId();
+
+    public abstract Optional<GcsVectoredReadOptions> getGcsVectoredReadOptions();
 
     public static Builder builder() {
         return new AutoValue_GcsReadOptions.Builder();
@@ -46,6 +48,8 @@ public abstract class GcsReadOptions {
         public abstract Builder setDecryptionKey(String decryptionKey);
 
         public abstract Builder setProjectId(String projectId);
+
+        public abstract Builder setGcsVectoredReadOptions(GcsVectoredReadOptions vectoredReadOptions);
 
         public abstract GcsReadOptions build();
     }

@@ -16,22 +16,18 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
+import java.util.List;
+import java.util.function.IntFunction;
 
-interface GcsClient {
+interface VectoredSeekableByteChannel extends SeekableByteChannel {
     /**
-     * Opens a new read channel.
+     * Reads the list of provided ranges in parallel.
+     *
+     * @param ranges   Ranges to be fetched in parallel
+     * @param allocate the function to allocate ByteBuffer
+     * @throws IOException on any IO failure
      */
-    VectoredSeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions)
-            throws IOException;
-
-    /**
-     * Fetches object metadata.
-     */
-    GcsItemInfo getGcsItemInfo(GcsItemId itemId) throws IOException;
-
-    /**
-     * Close the client.
-     */
-    void close();
+    void readVectored(List<GcsObjectRange> ranges, IntFunction<ByteBuffer> allocate) throws IOException;
 }

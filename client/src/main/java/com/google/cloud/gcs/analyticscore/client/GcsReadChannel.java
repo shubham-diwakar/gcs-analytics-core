@@ -21,14 +21,16 @@ import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.List;
+import java.util.function.IntFunction;
 
-class GcsReadChannel implements SeekableByteChannel {
+class GcsReadChannel implements VectoredSeekableByteChannel {
 
     private Storage storage;
     private GcsReadOptions readOptions;
@@ -93,6 +95,11 @@ class GcsReadChannel implements SeekableByteChannel {
         if (readChannel.isOpen()) {
             readChannel.close();
         }
+    }
+
+    @Override
+    public void readVectored(List<GcsObjectRange> ranges, IntFunction<ByteBuffer> allocate) throws IOException {
+        throw new NotImplementedException("Vectored reads are not yet supported");
     }
 
     private ReadChannel openReadChannel(GcsItemInfo itemInfo, GcsReadOptions readOptions) throws IOException {

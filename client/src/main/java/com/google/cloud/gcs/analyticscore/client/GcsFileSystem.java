@@ -31,7 +31,7 @@ public interface GcsFileSystem {
      * @throws FileNotFoundException if the given path does not exist.
      * @throws IOException           if object exists but cannot be opened.
      */
-    SeekableByteChannel open(URI path, GcsReadOptions options) throws IOException;
+    VectoredSeekableByteChannel open(URI path, GcsReadOptions options) throws IOException;
 
     /**
      * Gets Metadata about the given path item.

@@ -30,12 +30,11 @@ import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.util.List;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GcsClientImpl implements GcsClient {
+class GcsClientImpl implements GcsClient {
     private static final Logger LOG = LoggerFactory.getLogger(GcsClientImpl.class);
     private static final List<Storage.BlobField> BLOB_METADATA_FIELDS = ImmutableList.of(Storage.BlobField.GENERATION
             , Storage.BlobField.SIZE);
@@ -56,7 +55,7 @@ public class GcsClientImpl implements GcsClient {
     }
 
     @Override
-    public SeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions) throws IOException {
+    public VectoredSeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions) throws IOException {
         checkNotNull(itemId);
         checkArgument(itemId.isGcsObject(), "Expected GCS object to be provided. But got: " + itemId);
         GcsItemInfo itemInfo = getGcsItemInfo(itemId);
