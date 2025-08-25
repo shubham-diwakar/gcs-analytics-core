@@ -20,29 +20,40 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.auth.Credentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class GcsFileSystemImpl implements GcsFileSystem {
 
   private final GcsClient gcsClient;
   private final GcsFileSystemOptions fileSystemOptions;
+  private Supplier<ExecutorService> executorService;
 
   public GcsFileSystemImpl(GcsFileSystemOptions fileSystemOptions) {
-    this.gcsClient = new GcsClientImpl(getGcsClientOptions(fileSystemOptions));
+    this.gcsClient = new GcsClientImpl(getGcsClientOptions(fileSystemOptions), executorService);
     this.fileSystemOptions = fileSystemOptions;
   }
 
   public GcsFileSystemImpl(Credentials credentials, GcsFileSystemOptions fileSystemOptions) {
-    this.gcsClient = new GcsClientImpl(credentials, getGcsClientOptions(fileSystemOptions));
     this.fileSystemOptions = fileSystemOptions;
+    initializeExecutorService();
+    this.gcsClient =
+        new GcsClientImpl(credentials, getGcsClientOptions(fileSystemOptions), executorService);
   }
 
   @VisibleForTesting
   GcsFileSystemImpl(GcsClient gcsClient, GcsFileSystemOptions fileSystemOptions) {
     this.gcsClient = gcsClient;
     this.fileSystemOptions = fileSystemOptions;
+    initializeExecutorService();
   }
 
   @Override
@@ -79,5 +90,21 @@ public class GcsFileSystemImpl implements GcsFileSystem {
     return fileSystemOptions.getGcsClientOptions() == null
         ? GcsClientOptions.builder().build()
         : fileSystemOptions.getGcsClientOptions();
+  }
+
+  private void initializeExecutorService() {
+    this.executorService =
+        Suppliers.memoize(
+            () ->
+                new ThreadPoolExecutor(
+                    fileSystemOptions.getReadThreadCount(),
+                    fileSystemOptions.getReadThreadCount(),
+                    0L,
+                    TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(),
+                    new ThreadFactoryBuilder()
+                        .setNameFormat("gcs-filesystem-range-pool-%d")
+                        .setDaemon(true)
+                        .build()));
   }
 }
