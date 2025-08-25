@@ -16,36 +16,34 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
-import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /** Represents a byte range from a GCS object. */
 @AutoValue
 abstract class GcsObjectCombinedRange {
 
-    // The individual ranges that make up the combined range.
-    abstract List<GcsObjectRange> getUnderlyingRanges();
+  // The individual ranges that make up the combined range.
+  abstract List<GcsObjectRange> getUnderlyingRanges();
 
-    // The starting offset of the combined range.
-    abstract long getOffset();
+  // The starting offset of the combined range.
+  abstract long getOffset();
 
-    // The length of the combined range.
-    abstract int getLength();
+  // The length of the combined range.
+  abstract int getLength();
 
-    public static Builder builder() {
-        return new AutoValue_GcsObjectCombinedRange.Builder();
-    }
+  public static Builder builder() {
+    return new AutoValue_GcsObjectCombinedRange.Builder();
+  }
 
-    /** Builder for {@link GcsObjectCombinedRange}. */
-    @AutoValue.Builder
-    public abstract static class Builder {
-        public abstract Builder setUnderlyingRanges(List<GcsObjectRange> underlyingRanges);
+  /** Builder for {@link GcsObjectCombinedRange}. */
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder setUnderlyingRanges(List<GcsObjectRange> underlyingRanges);
 
-        public abstract Builder setOffset(long offset);
+    public abstract Builder setOffset(long offset);
 
-        public abstract Builder setLength(int length);
+    public abstract Builder setLength(int length);
 
-        public abstract GcsObjectCombinedRange build();
-    }
+    public abstract GcsObjectCombinedRange build();
+  }
 }

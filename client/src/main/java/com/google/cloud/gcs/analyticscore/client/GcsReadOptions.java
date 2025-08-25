@@ -16,41 +16,36 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
-
 import java.util.Optional;
 
-/**
- * Configuration options for the GCS read options.
- */
+/** Configuration options for the GCS read options. */
 @AutoValue
 public abstract class GcsReadOptions {
 
-    public abstract Optional<Integer> getChunkSize();
+  public abstract Optional<Integer> getChunkSize();
 
-    public abstract Optional<String> getDecryptionKey();
+  public abstract Optional<String> getDecryptionKey();
 
-    public abstract Optional<String> getProjectId();
+  public abstract Optional<String> getProjectId();
 
-    public abstract Optional<GcsVectoredReadOptions> getGcsVectoredReadOptions();
+  public abstract Optional<GcsVectoredReadOptions> getGcsVectoredReadOptions();
 
-    public static Builder builder() {
-        return new AutoValue_GcsReadOptions.Builder();
-    }
+  public static Builder builder() {
+    return new AutoValue_GcsReadOptions.Builder();
+  }
 
-    /**
-     * Builder for {@link GcsReadOptions}.
-     */
-    @AutoValue.Builder
-    public abstract static class Builder {
+  /** Builder for {@link GcsReadOptions}. */
+  @AutoValue.Builder
+  public abstract static class Builder {
 
-        public abstract Builder setChunkSize(Integer chunkSize);
+    public abstract Builder setChunkSize(Integer chunkSize);
 
-        public abstract Builder setDecryptionKey(String decryptionKey);
+    public abstract Builder setDecryptionKey(String decryptionKey);
 
-        public abstract Builder setProjectId(String projectId);
+    public abstract Builder setProjectId(String projectId);
 
-        public abstract Builder setGcsVectoredReadOptions(GcsVectoredReadOptions vectoredReadOptions);
+    public abstract Builder setGcsVectoredReadOptions(GcsVectoredReadOptions vectoredReadOptions);
 
-        public abstract GcsReadOptions build();
-    }
+    public abstract GcsReadOptions build();
+  }
 }

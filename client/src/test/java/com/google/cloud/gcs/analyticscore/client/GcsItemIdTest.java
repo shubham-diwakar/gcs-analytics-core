@@ -21,36 +21,35 @@ import org.junit.jupiter.api.Test;
 
 class GcsItemIdTest {
 
-    @Test
-    void build_gcsObject_succeeds() {
-        GcsItemId gcsItemId =
-                GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object").build();
+  @Test
+  void build_gcsObject_succeeds() {
+    GcsItemId gcsItemId =
+        GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object").build();
 
-        assertThat(gcsItemId.getBucketName()).isEqualTo("test-bucket");
-        assertThat(gcsItemId.getObjectName().get()).isEqualTo("test-object");
-    }
+    assertThat(gcsItemId.getBucketName()).isEqualTo("test-bucket");
+    assertThat(gcsItemId.getObjectName().get()).isEqualTo("test-object");
+  }
 
-    @Test
-    void build_gcsBucket_succeeds() {
-        GcsItemId gcsItemId = GcsItemId.builder().setBucketName("test-bucket").build();
+  @Test
+  void build_gcsBucket_succeeds() {
+    GcsItemId gcsItemId = GcsItemId.builder().setBucketName("test-bucket").build();
 
-        assertThat(gcsItemId.getBucketName()).isEqualTo("test-bucket");
-        assertThat(gcsItemId.getObjectName().isEmpty()).isTrue();
-    }
+    assertThat(gcsItemId.getBucketName()).isEqualTo("test-bucket");
+    assertThat(gcsItemId.getObjectName().isEmpty()).isTrue();
+  }
 
-    @Test
-    void isGcsObject_itemIdPointsToGcsObject_returnsTrue() {
-        GcsItemId gcsItemId =
-                GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object").build();
+  @Test
+  void isGcsObject_itemIdPointsToGcsObject_returnsTrue() {
+    GcsItemId gcsItemId =
+        GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object").build();
 
-        assertThat(gcsItemId.isGcsObject()).isTrue();
-    }
+    assertThat(gcsItemId.isGcsObject()).isTrue();
+  }
 
-    @Test
-    void isGcsObject_itemIdPointsToDirectory_returnsFalse() {
-        GcsItemId gcsItemId = GcsItemId.builder().setBucketName("test-bucket").build();
+  @Test
+  void isGcsObject_itemIdPointsToDirectory_returnsFalse() {
+    GcsItemId gcsItemId = GcsItemId.builder().setBucketName("test-bucket").build();
 
-        assertThat(gcsItemId.isGcsObject()).isFalse();
-    }
-
+    assertThat(gcsItemId.isGcsObject()).isFalse();
+  }
 }

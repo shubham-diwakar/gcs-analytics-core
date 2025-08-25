@@ -17,41 +17,33 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
 
-/**
- * Represents metadata of a GCS Item.
- */
+/** Represents metadata of a GCS Item. */
 @AutoValue
 abstract class GcsItemInfo {
 
-    abstract GcsItemId getItemId();
+  abstract GcsItemId getItemId();
 
-    /**
-     * Size of an object in bytes. Returns -1 for items that do not exist.
-     */
-    abstract long getSize();
+  /** Size of an object in bytes. Returns -1 for items that do not exist. */
+  abstract long getSize();
 
-    /**
-     * Generation ID of the object when the metadata is read.
-     */
-    abstract long getContentGeneration();
+  /** Generation ID of the object when the metadata is read. */
+  abstract long getContentGeneration();
 
-    static Builder builder() {
-        // By default, set size to -1, indicating a non-existent item.
-        return new AutoValue_GcsItemInfo.Builder().setSize(-1L);
-    }
+  static Builder builder() {
+    // By default, set size to -1, indicating a non-existent item.
+    return new AutoValue_GcsItemInfo.Builder().setSize(-1L);
+  }
 
-    /**
-     * Builder for {@link GcsItemInfo}.
-     */
-    @AutoValue.Builder
-    abstract static class Builder {
+  /** Builder for {@link GcsItemInfo}. */
+  @AutoValue.Builder
+  abstract static class Builder {
 
-        abstract Builder setItemId(GcsItemId itemId);
+    abstract Builder setItemId(GcsItemId itemId);
 
-        abstract Builder setSize(long size);
+    abstract Builder setSize(long size);
 
-        abstract Builder setContentGeneration(long contentGeneration);
+    abstract Builder setContentGeneration(long contentGeneration);
 
-        abstract GcsItemInfo build();
-    }
+    abstract GcsItemInfo build();
+  }
 }

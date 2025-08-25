@@ -16,40 +16,36 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
-
 import java.util.Optional;
 
-/**
- * Configuration options for the GCS client.
- */
+/** Configuration options for the GCS client. */
 @AutoValue
 public abstract class GcsClientOptions {
 
-    abstract Optional<String> getProjectId();
+  abstract Optional<String> getProjectId();
 
-    abstract Optional<String> getClientLibToken();
+  abstract Optional<String> getClientLibToken();
 
-    abstract Optional<String> getServiceHost();
+  abstract Optional<String> getServiceHost();
 
-    abstract Optional<String> getUserAgent();
+  abstract Optional<String> getUserAgent();
 
-    static Builder builder() {
-        return new AutoValue_GcsClientOptions.Builder();
-    }
+  static Builder builder() {
+    return new AutoValue_GcsClientOptions.Builder();
+  }
 
-    /**
-     * Builder for {@link GcsClientOptions}.
-     */
-    @AutoValue.Builder
-    abstract static class Builder {
+  /** Builder for {@link GcsClientOptions}. */
+  @AutoValue.Builder
+  abstract static class Builder {
 
-        abstract Builder setProjectId(String projectId);
+    abstract Builder setProjectId(String projectId);
 
-        abstract Builder setClientLibToken(String clientLibToken);
+    abstract Builder setClientLibToken(String clientLibToken);
 
-        abstract Builder setServiceHost(String serviceHost);
+    abstract Builder setServiceHost(String serviceHost);
 
-        abstract Builder setUserAgent(String userAgent);
-        abstract GcsClientOptions build();
-    }
+    abstract Builder setUserAgent(String userAgent);
+
+    abstract GcsClientOptions build();
+  }
 }

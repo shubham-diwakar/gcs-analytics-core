@@ -16,48 +16,43 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
-
 import java.net.URI;
 import java.util.Map;
 
 /**
  * Contains information about a GCS file.
  *
- * <p>Note: This class wraps GcsItemInfo, adds file system specific information
- * and hides bucket/object specific information.
+ * <p>Note: This class wraps GcsItemInfo, adds file system specific information and hides
+ * bucket/object specific information.
  */
 @AutoValue
 abstract class GcsFileInfo {
 
-    abstract GcsItemInfo getItemInfo();
+  abstract GcsItemInfo getItemInfo();
 
-    /**
-     * Gets the path of this file or directory.
-     */
-    abstract URI getUri();
+  /** Gets the path of this file or directory. */
+  abstract URI getUri();
 
-    /**
-     * Retrieve file attributes for this file.
-     *
-     * @return A map of file attributes
-     */
-    abstract Map<String, byte[]> getAttributes();
+  /**
+   * Retrieve file attributes for this file.
+   *
+   * @return A map of file attributes
+   */
+  abstract Map<String, byte[]> getAttributes();
 
-    static Builder builder() {
-        return new AutoValue_GcsFileInfo.Builder();
-    }
+  static Builder builder() {
+    return new AutoValue_GcsFileInfo.Builder();
+  }
 
-    /**
-     * Builder for {@link GcsFileInfo}.
-     */
-    @AutoValue.Builder
-    abstract static class Builder {
-        abstract Builder setItemInfo(GcsItemInfo itemInfo);
+  /** Builder for {@link GcsFileInfo}. */
+  @AutoValue.Builder
+  abstract static class Builder {
+    abstract Builder setItemInfo(GcsItemInfo itemInfo);
 
-        abstract Builder setUri(URI uri);
+    abstract Builder setUri(URI uri);
 
-        abstract Builder setAttributes(Map<String, byte[]> attributes);
+    abstract Builder setAttributes(Map<String, byte[]> attributes);
 
-        abstract GcsFileInfo build();
-    }
+    abstract GcsFileInfo build();
+  }
 }

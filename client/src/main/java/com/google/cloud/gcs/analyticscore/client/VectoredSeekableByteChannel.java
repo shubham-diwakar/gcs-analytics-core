@@ -22,12 +22,13 @@ import java.util.List;
 import java.util.function.IntFunction;
 
 interface VectoredSeekableByteChannel extends SeekableByteChannel {
-    /**
-     * Reads the list of provided ranges in parallel.
-     *
-     * @param ranges   Ranges to be fetched in parallel
-     * @param allocate the function to allocate ByteBuffer
-     * @throws IOException on any IO failure
-     */
-    void readVectored(List<GcsObjectRange> ranges, IntFunction<ByteBuffer> allocate) throws IOException;
+  /**
+   * Reads the list of provided ranges in parallel.
+   *
+   * @param ranges Ranges to be fetched in parallel
+   * @param allocate the function to allocate ByteBuffer
+   * @throws IOException on any IO failure
+   */
+  void readVectored(List<GcsObjectRange> ranges, IntFunction<ByteBuffer> allocate)
+      throws IOException;
 }

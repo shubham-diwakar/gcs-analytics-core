@@ -17,38 +17,32 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
 
-/**
- * Configuration options for the GCS File System.
- */
+/** Configuration options for the GCS File System. */
 @AutoValue
 public abstract class GcsFileSystemOptions {
 
-    /**
-     * Cloud Storage client to use.
-     */
-    public enum ClientType {
-        HTTP_CLIENT,
-        GRPC_CLIENT,
-    }
+  /** Cloud Storage client to use. */
+  public enum ClientType {
+    HTTP_CLIENT,
+    GRPC_CLIENT,
+  }
 
-    public abstract ClientType getClientType();
+  public abstract ClientType getClientType();
 
-    public abstract GcsReadOptions getReadOptions();
+  public abstract GcsReadOptions getReadOptions();
 
-    public static Builder builder() {
-        return new AutoValue_GcsFileSystemOptions.Builder().setClientType(ClientType.HTTP_CLIENT);
-    }
+  public static Builder builder() {
+    return new AutoValue_GcsFileSystemOptions.Builder().setClientType(ClientType.HTTP_CLIENT);
+  }
 
-    /**
-     * Builder for {@link GcsFileSystemOptions}.
-     */
-    @AutoValue.Builder
-    public abstract static class Builder {
+  /** Builder for {@link GcsFileSystemOptions}. */
+  @AutoValue.Builder
+  public abstract static class Builder {
 
-        public abstract Builder setClientType(ClientType clientType);
+    public abstract Builder setClientType(ClientType clientType);
 
-        public abstract Builder setReadOptions(GcsReadOptions readOptions);
+    public abstract Builder setReadOptions(GcsReadOptions readOptions);
 
-        public abstract GcsFileSystemOptions build();
-    }
+    public abstract GcsFileSystemOptions build();
+  }
 }
