@@ -27,12 +27,16 @@ public abstract class GcsFileSystemOptions {
     GRPC_CLIENT,
   }
 
+  public abstract int getReadThreadCount();
+
   public abstract ClientType getClientType();
 
   public abstract GcsClientOptions getGcsClientOptions();
 
   public static Builder builder() {
-    return new AutoValue_GcsFileSystemOptions.Builder().setClientType(ClientType.HTTP_CLIENT);
+    return new AutoValue_GcsFileSystemOptions.Builder()
+        .setReadThreadCount(16)
+        .setClientType(ClientType.HTTP_CLIENT);
   }
 
   /** Builder for {@link GcsFileSystemOptions}. */
@@ -40,6 +44,8 @@ public abstract class GcsFileSystemOptions {
   public abstract static class Builder {
 
     public abstract Builder setClientType(ClientType clientType);
+
+    public abstract Builder setReadThreadCount(int readThreadCount);
 
     public abstract Builder setGcsClientOptions(GcsClientOptions gcsClientOptions);
 

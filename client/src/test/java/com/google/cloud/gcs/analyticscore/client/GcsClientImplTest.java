@@ -24,11 +24,15 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.*;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,13 +42,15 @@ class GcsClientImplTest {
       GcsClientOptions.builder().setProjectId("test-project").build();
 
   private final Storage storage = LocalStorageHelper.getOptions().getService();
+  private final Supplier<ExecutorService> executorServiceSupplier =
+      Suppliers.memoize(() -> Executors.newFixedThreadPool(30));
 
   private GcsClient gcsClient;
 
   @BeforeEach
   void setUp() throws IOException {
     gcsClient =
-        new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS) {
+        new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS, executorServiceSupplier) {
           @Override
           Storage createStorage(Optional<Credentials> credentials) {
             return GcsClientImplTest.this.storage;
@@ -143,20 +149,26 @@ class GcsClientImplTest {
 
   @Test
   void createStorage_withoutProjectId_usesApplicationDefaultQuotaProjectId() throws IOException {
-    GcsClientImpl client = new GcsClientImpl(GcsClientOptions.builder().build());
+    GcsClientImpl client =
+        new GcsClientImpl(GcsClientOptions.builder().build(), executorServiceSupplier);
+
     assertThat(client.storage.getOptions().getProjectId())
         .isEqualTo(GoogleCredentials.getApplicationDefault().getQuotaProjectId());
   }
 
   @Test
   void createStorage_withoutCredentials_usesApplicationDefaultCredentials() throws IOException {
-    GcsClientImpl client = new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS);
+    GcsClientImpl client = new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS, executorServiceSupplier);
+
     assertThat(client.storage.getOptions().getCredentials())
         .isEqualTo(GoogleCredentials.getApplicationDefault());
   }
 
   void createStore_withCredentials_usesProvidedCredentials() throws IOException {
-    GcsClientImpl client = new GcsClientImpl(NoCredentials.getInstance(), TEST_GCS_CLIENT_OPTIONS);
+    GcsClientImpl client =
+        new GcsClientImpl(
+            NoCredentials.getInstance(), TEST_GCS_CLIENT_OPTIONS, executorServiceSupplier);
+
     assertThat(client.storage.getOptions().getCredentials()).isEqualTo(NoCredentials.getInstance());
   }
 
@@ -173,7 +185,7 @@ class GcsClientImplTest {
             .setServiceHost(serviceHost)
             .build();
 
-    GcsClientImpl client = new GcsClientImpl(testCredentials, options);
+    GcsClientImpl client = new GcsClientImpl(testCredentials, options, executorServiceSupplier);
     StorageOptions storageOptions = client.storage.getOptions();
 
     assertThat(storageOptions.getProjectId()).isEqualTo(projectId);

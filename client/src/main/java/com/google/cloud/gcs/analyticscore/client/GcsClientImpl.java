@@ -22,11 +22,13 @@ import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.auth.Credentials;
 import com.google.cloud.storage.*;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,15 +39,21 @@ class GcsClientImpl implements GcsClient {
 
   @VisibleForTesting Storage storage;
   private final GcsClientOptions clientOptions;
+  private Supplier<ExecutorService> executorServiceSupplier;
 
-  GcsClientImpl(Credentials credentials, GcsClientOptions clientOptions) {
+  GcsClientImpl(
+      Credentials credentials,
+      GcsClientOptions clientOptions,
+      Supplier<ExecutorService> executorServiceSupplier) {
     this.clientOptions = clientOptions;
     this.storage = createStorage(Optional.of(credentials));
+    this.executorServiceSupplier = executorServiceSupplier;
   }
 
-  GcsClientImpl(GcsClientOptions clientOptions) {
+  GcsClientImpl(GcsClientOptions clientOptions, Supplier<ExecutorService> executorServiceSupplier) {
     this.clientOptions = clientOptions;
     this.storage = createStorage(Optional.empty());
+    this.executorServiceSupplier = executorServiceSupplier;
   }
 
   @Override
@@ -55,7 +63,7 @@ class GcsClientImpl implements GcsClient {
     checkArgument(itemId.isGcsObject(), "Expected GCS object to be provided. But got: " + itemId);
     GcsItemInfo itemInfo = getGcsItemInfo(itemId);
 
-    return new GcsReadChannel(storage, itemInfo, readOptions);
+    return new GcsReadChannel(storage, itemInfo, readOptions, executorServiceSupplier);
   }
 
   @Override

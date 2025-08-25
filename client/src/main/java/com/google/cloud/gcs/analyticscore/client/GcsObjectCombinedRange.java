@@ -16,14 +16,14 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
 
 /** Represents a byte range from a GCS object. */
 @AutoValue
 public abstract class GcsObjectCombinedRange {
 
   // The individual ranges that make up the combined range.
-  public abstract List<GcsObjectRange> getUnderlyingRanges();
+  public abstract ImmutableList<GcsObjectRange> getUnderlyingRanges();
 
   // The starting offset of the combined range.
   public abstract long getOffset();
@@ -38,7 +38,7 @@ public abstract class GcsObjectCombinedRange {
   /** Builder for {@link GcsObjectCombinedRange}. */
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setUnderlyingRanges(List<GcsObjectRange> underlyingRanges);
+    public abstract Builder setUnderlyingRanges(ImmutableList<GcsObjectRange> underlyingRanges);
 
     public abstract Builder setOffset(long offset);
 
@@ -46,4 +46,35 @@ public abstract class GcsObjectCombinedRange {
 
     public abstract GcsObjectCombinedRange build();
   }
+
+  /**
+   * Returns a new {@link GcsObjectCombinedRange} representing the union of this combined range and
+   * the given {@link GcsObjectRange}. The underlying ranges are combined, and the offset and length
+   * are updated to encompass both ranges.
+   *
+   * <p>Note: This method does not perform safety checks, It simply expands the bounds to include
+   * the new range.
+   *
+   * @param range The {@link GcsObjectRange} to union with this combined range.
+   * @return A new {@link GcsObjectCombinedRange} representing the union.
+   */
+  public GcsObjectCombinedRange union(GcsObjectRange range) {
+    ImmutableList.Builder<GcsObjectRange> newRanges = ImmutableList.builder();
+    newRanges.addAll(getUnderlyingRanges());
+    newRanges.add(range);
+
+    long newOffset = Math.min(getOffset(), range.getOffset());
+    long thisEnd = getOffset() + getLength();
+    long rangeEnd = range.getOffset() + range.getLength();
+    long newEnd = Math.max(thisEnd, rangeEnd);
+    int newLength = (int) (newEnd - newOffset);
+
+    return toBuilder()
+        .setUnderlyingRanges(newRanges.build())
+        .setOffset(newOffset)
+        .setLength(newLength)
+        .build();
+  }
+
+  public abstract Builder toBuilder();
 }
