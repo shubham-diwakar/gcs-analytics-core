@@ -59,6 +59,24 @@ class GcsReadChannelTest {
   }
 
   @Test
+  void constructor_itemInfoDoesNotPointToObject_throws() {
+    GcsItemId itemId =
+            GcsItemId.builder().setBucketName("test-bucket").build();
+    GcsItemInfo itemInfo =
+            GcsItemInfo.builder()
+                    .setItemId(itemId)
+                    .setContentGeneration(0L)
+                    .build();
+
+    IllegalArgumentException e =
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new GcsReadChannel(storage, itemInfo, TEST_GCS_READ_OPTIONS));
+
+    assertThat(e).hasMessageThat().isEqualTo("Expected Gcs Object but got " + itemInfo.getItemId());
+  }
+
+  @Test
   void constructor_nullItemInfo_throwsNullPointerException() {
     NullPointerException e =
         assertThrows(
@@ -186,8 +204,8 @@ class GcsReadChannelTest {
         .hasMessageThat()
         .contains(
             String.format(
-                "Invalid seek offset: position value (11) must be " + "between 0 and 11 for ",
-                itemInfo.getItemId()));
+                "Invalid seek offset: position value (%d) must be " + "between 0 and 11 for ",
+                itemInfo.getSize()));
   }
 
   @Test

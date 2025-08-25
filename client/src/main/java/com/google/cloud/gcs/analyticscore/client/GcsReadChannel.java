@@ -15,6 +15,7 @@
  */
 package com.google.cloud.gcs.analyticscore.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.cloud.ReadChannel;
@@ -104,9 +105,7 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
 
   private ReadChannel openReadChannel(GcsItemInfo itemInfo, GcsReadOptions readOptions)
       throws IOException {
-    checkNotNull(
-        itemInfo.getItemId().isGcsObject(), "Expected Gcs Object but got %s", itemInfo.getItemId());
-    checkNotNull(itemInfo.getContentGeneration(), "Generation cannot be null");
+    checkArgument(itemInfo.getItemId().isGcsObject(), "Expected Gcs Object but got %s", itemInfo.getItemId());
     BlobId blobId =
         BlobId.of(
             itemInfo.getItemId().getBucketName(),

@@ -87,7 +87,6 @@ class GcsClientImpl implements GcsClient {
   private Storage createStorage(Credentials credentials) {
     checkArgument(clientOptions.getProjectId().isPresent(), "Project Id cannot be null");
     checkNotNull(credentials, "Credentials should not be null");
-    List<Storage.BlobSourceOption> sourceOptions = Lists.newArrayList();
     StorageOptions.Builder builder = StorageOptions.newBuilder();
     clientOptions
         .getUserAgent()
