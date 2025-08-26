@@ -105,7 +105,8 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
 
   private ReadChannel openReadChannel(GcsItemInfo itemInfo, GcsReadOptions readOptions)
       throws IOException {
-    checkArgument(itemInfo.getItemId().isGcsObject(), "Expected Gcs Object but got %s", itemInfo.getItemId());
+    checkArgument(
+        itemInfo.getItemId().isGcsObject(), "Expected Gcs Object but got %s", itemInfo.getItemId());
     BlobId blobId =
         BlobId.of(
             itemInfo.getItemId().getBucketName(),

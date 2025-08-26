@@ -25,7 +25,6 @@ import com.google.cloud.storage.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.util.List;
 import org.slf4j.Logger;

@@ -18,3 +18,16 @@ understand and tune complex configurations for different access methods.
 
 ## Current Status
 Under development.
+
+## Build instructions
+
+To build the library:
+```shell
+./mvnw clean package
+```
+
+To verify the test coverage, run the following commands from main directory:
+```shell
+./mvnw -P coverage clean verify
+```
+The coverage report can be found in `coverage/target/site/jacoco-aggregate`.

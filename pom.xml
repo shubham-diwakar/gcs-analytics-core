@@ -27,10 +27,12 @@ limitations under the License.
     <modules>
         <module>core</module>
         <module>client</module>
+        <module>coverage</module>
     </modules>
 
     <properties>
         <argLine/>
+        <google.analyticscore.version>1.0-SNAPSHOT</google.analyticscore.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <build.java.source.version>11</build.java.source.version>
@@ -47,6 +49,20 @@ limitations under the License.
         <cloud.libraries.bom.version>26.65.0</cloud.libraries.bom.version>
         <apache.commons.version>3.12.0</apache.commons.version>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -164,6 +180,18 @@ limitations under the License.
                                 <goal>check</goal>
                             </goals>
                             <phase>compile</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.7</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
                         </execution>
                     </executions>
                 </plugin>

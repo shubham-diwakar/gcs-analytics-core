@@ -60,18 +60,13 @@ class GcsReadChannelTest {
 
   @Test
   void constructor_itemInfoDoesNotPointToObject_throws() {
-    GcsItemId itemId =
-            GcsItemId.builder().setBucketName("test-bucket").build();
-    GcsItemInfo itemInfo =
-            GcsItemInfo.builder()
-                    .setItemId(itemId)
-                    .setContentGeneration(0L)
-                    .build();
+    GcsItemId itemId = GcsItemId.builder().setBucketName("test-bucket").build();
+    GcsItemInfo itemInfo = GcsItemInfo.builder().setItemId(itemId).setContentGeneration(0L).build();
 
     IllegalArgumentException e =
-            assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new GcsReadChannel(storage, itemInfo, TEST_GCS_READ_OPTIONS));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new GcsReadChannel(storage, itemInfo, TEST_GCS_READ_OPTIONS));
 
     assertThat(e).hasMessageThat().isEqualTo("Expected Gcs Object but got " + itemInfo.getItemId());
   }
