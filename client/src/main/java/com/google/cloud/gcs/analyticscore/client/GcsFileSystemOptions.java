@@ -29,7 +29,7 @@ public abstract class GcsFileSystemOptions {
 
   public abstract ClientType getClientType();
 
-  public abstract GcsReadOptions getReadOptions();
+  public abstract GcsClientOptions getGcsClientOptions();
 
   public static Builder builder() {
     return new AutoValue_GcsFileSystemOptions.Builder().setClientType(ClientType.HTTP_CLIENT);
@@ -41,7 +41,7 @@ public abstract class GcsFileSystemOptions {
 
     public abstract Builder setClientType(ClientType clientType);
 
-    public abstract Builder setReadOptions(GcsReadOptions readOptions);
+    public abstract Builder setGcsClientOptions(GcsClientOptions gcsClientOptions);
 
     public abstract GcsFileSystemOptions build();
   }

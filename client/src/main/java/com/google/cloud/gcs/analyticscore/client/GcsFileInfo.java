@@ -26,7 +26,7 @@ import java.util.Map;
  * bucket/object specific information.
  */
 @AutoValue
-abstract class GcsFileInfo {
+public abstract class GcsFileInfo {
 
   abstract GcsItemInfo getItemInfo();
 

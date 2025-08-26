@@ -41,7 +41,7 @@ limitations under the License.
         <google.auto-value.version>1.10.4</google.auto-value.version>
         <google.cloud-storage.bom.version>2.52.2</google.cloud-storage.bom.version>
         <google.guava.version>33.1.0-jre</google.guava.version>
-        <google.java-format.version>1.15.0</google.java-format.version>
+        <google.java-format.version>1.17.0</google.java-format.version>
         <google.error-prone.version>2.16</google.error-prone.version>
         <mockito.version>5.11.0</mockito.version>
         <truth.version>1.4.2</truth.version>
@@ -105,6 +105,12 @@ limitations under the License.
                 <groupId>com.google.truth</groupId>
                 <artifactId>truth</artifactId>
                 <version>${truth.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

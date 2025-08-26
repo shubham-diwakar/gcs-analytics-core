@@ -41,7 +41,7 @@ public interface GcsFileSystem {
   GcsFileInfo getFileInfo(URI path) throws IOException;
 
   /** Retrieve the options that were used to create this GcsFileSystem. */
-  GcsFileSystemOptions getOptions();
+  GcsFileSystemOptions getFileSystemOptions();
 
   /** Retrieve the gcs client used to create this GcsFileSystem. */
   GcsClient getGcsClient();
