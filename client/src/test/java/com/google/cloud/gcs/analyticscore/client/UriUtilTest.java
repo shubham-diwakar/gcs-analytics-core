@@ -45,10 +45,10 @@ public final class UriUtilTest {
 
   @Test
   public void getItemIdFromString_gsOnly_throwsIllegalArgumentException() {
-      IllegalArgumentException e =
-              assertThrows(IllegalArgumentException.class, () -> UriUtil.getItemIdFromString("gs://"));
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> UriUtil.getItemIdFromString("gs://"));
 
-      assertThat(e).hasMessageThat().isEqualTo("GCS path must include a bucket name: gs://");
+    assertThat(e).hasMessageThat().isEqualTo("GCS path must include a bucket name: gs://");
   }
 
   @Test

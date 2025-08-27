@@ -67,6 +67,11 @@ limitations under the License.
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.google.cloud.gcs</groupId>
+                <artifactId>client</artifactId>
+                <version>${google.analyticscore.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.auto.value</groupId>
                 <artifactId>auto-value</artifactId>
                 <version>${google.auto-value.version}</version>

@@ -33,4 +33,10 @@ limitations under the License.
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.google.cloud.gcs</groupId>
+            <artifactId>client</artifactId>
+        </dependency>
+    </dependencies>
 </project>

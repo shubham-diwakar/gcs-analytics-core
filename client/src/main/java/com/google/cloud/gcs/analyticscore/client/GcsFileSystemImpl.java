@@ -17,55 +17,56 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import java.net.URI;
+
 import com.google.auth.Credentials;
-import java.io.IOException;
-import java.util.Collections;
 import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
 
 public class GcsFileSystemImpl implements GcsFileSystem {
 
-    private final GcsClient gcsClient;
-    private final GcsFileSystemOptions fileSystemOptions;
+  private final GcsClient gcsClient;
+  private final GcsFileSystemOptions fileSystemOptions;
 
-    public GcsFileSystemImpl(Credentials credentials, GcsFileSystemOptions fileSystemOptions) {
-        this.gcsClient = new GcsClientImpl(credentials, fileSystemOptions.getGcsClientOptions());
-        this.fileSystemOptions = fileSystemOptions;
-    }
+  public GcsFileSystemImpl(Credentials credentials, GcsFileSystemOptions fileSystemOptions) {
+    this.gcsClient = new GcsClientImpl(credentials, fileSystemOptions.getGcsClientOptions());
+    this.fileSystemOptions = fileSystemOptions;
+  }
 
-    @VisibleForTesting
-    GcsFileSystemImpl(GcsClient gcsClient, GcsFileSystemOptions fileSystemOptions) {
-        this.gcsClient = gcsClient;
-        this.fileSystemOptions = fileSystemOptions;
-    }
+  @VisibleForTesting
+  GcsFileSystemImpl(GcsClient gcsClient, GcsFileSystemOptions fileSystemOptions) {
+    this.gcsClient = gcsClient;
+    this.fileSystemOptions = fileSystemOptions;
+  }
 
-    @Override
-    public VectoredSeekableByteChannel open(URI path, GcsReadOptions readOptions) throws IOException {
-        checkNotNull(path, "path should not be null");
-        GcsItemId itemId = UriUtil.getItemIdFromString(path.toString());
-        checkArgument(itemId.isGcsObject(), "Expected GCS object to be provided. But got: " + itemId);
-        return gcsClient.openReadChannel(itemId, readOptions);
-    }
+  @Override
+  public VectoredSeekableByteChannel open(URI path, GcsReadOptions readOptions) throws IOException {
+    checkNotNull(path, "path should not be null");
+    GcsItemId itemId = UriUtil.getItemIdFromString(path.toString());
+    checkArgument(itemId.isGcsObject(), "Expected GCS object to be provided. But got: " + itemId);
+    return gcsClient.openReadChannel(itemId, readOptions);
+  }
 
-    @Override
-    public GcsFileInfo getFileInfo(URI path) throws IOException {
-        checkNotNull(path, "path should not be null");
-        GcsItemId itemId = UriUtil.getItemIdFromString(path.toString());
-        GcsItemInfo gcsItemInfo = gcsClient.getGcsItemInfo(itemId);
-        return GcsFileInfo.builder()
-                .setItemInfo(gcsItemInfo)
-                .setUri(path)
-                .setAttributes(Collections.emptyMap())
-                .build();
-    }
+  @Override
+  public GcsFileInfo getFileInfo(URI path) throws IOException {
+    checkNotNull(path, "path should not be null");
+    GcsItemId itemId = UriUtil.getItemIdFromString(path.toString());
+    GcsItemInfo gcsItemInfo = gcsClient.getGcsItemInfo(itemId);
+    return GcsFileInfo.builder()
+        .setItemInfo(gcsItemInfo)
+        .setUri(path)
+        .setAttributes(Collections.emptyMap())
+        .build();
+  }
 
-    @Override
-    public GcsFileSystemOptions getFileSystemOptions() {
-        return this.fileSystemOptions;
-    }
+  @Override
+  public GcsFileSystemOptions getFileSystemOptions() {
+    return this.fileSystemOptions;
+  }
 
-    @Override
-    public GcsClient getGcsClient() {
-        return this.gcsClient;
-    }
+  @Override
+  public GcsClient getGcsClient() {
+    return this.gcsClient;
+  }
 }
