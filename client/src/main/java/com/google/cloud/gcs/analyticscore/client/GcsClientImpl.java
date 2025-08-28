@@ -20,13 +20,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.auth.Credentials;
-import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,12 +40,12 @@ class GcsClientImpl implements GcsClient {
 
   GcsClientImpl(Credentials credentials, GcsClientOptions clientOptions) {
     this.clientOptions = clientOptions;
-    this.storage = createStorage(credentials);
+    this.storage = createStorage(Optional.of(credentials));
   }
 
   GcsClientImpl(GcsClientOptions clientOptions) {
     this.clientOptions = clientOptions;
-    this.storage = createStorage();
+    this.storage = createStorage(Optional.empty());
   }
 
   @Override
@@ -62,7 +62,6 @@ class GcsClientImpl implements GcsClient {
   public GcsItemInfo getGcsItemInfo(GcsItemId itemId) throws IOException {
     checkNotNull(itemId, "Item ID must not be null.");
     if (itemId.isGcsObject()) {
-
       return getGcsObjectInfo(itemId);
     }
     throw new UnsupportedOperationException(
@@ -79,13 +78,7 @@ class GcsClientImpl implements GcsClient {
   }
 
   @VisibleForTesting
-  Storage createStorage() {
-    return createStorage(NoCredentials.getInstance());
-  }
-
-  private Storage createStorage(Credentials credentials) {
-    checkArgument(clientOptions.getProjectId().isPresent(), "Project Id cannot be null");
-    checkNotNull(credentials, "Credentials should not be null");
+  Storage createStorage(Optional<Credentials> credentials) {
     StorageOptions.Builder builder = StorageOptions.newBuilder();
     clientOptions
         .getUserAgent()
@@ -96,7 +89,7 @@ class GcsClientImpl implements GcsClient {
     clientOptions.getProjectId().ifPresent(builder::setProjectId);
     clientOptions.getClientLibToken().ifPresent(builder::setClientLibToken);
     clientOptions.getServiceHost().ifPresent(builder::setHost);
-    builder.setCredentials(credentials);
+    credentials.ifPresent(builder::setCredentials);
 
     return builder.build().getService();
   }

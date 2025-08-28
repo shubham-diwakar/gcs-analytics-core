@@ -29,8 +29,13 @@ public class GcsFileSystemImpl implements GcsFileSystem {
   private final GcsClient gcsClient;
   private final GcsFileSystemOptions fileSystemOptions;
 
+  public GcsFileSystemImpl(GcsFileSystemOptions fileSystemOptions) {
+    this.gcsClient = new GcsClientImpl(getGcsClientOptions(fileSystemOptions));
+    this.fileSystemOptions = fileSystemOptions;
+  }
+
   public GcsFileSystemImpl(Credentials credentials, GcsFileSystemOptions fileSystemOptions) {
-    this.gcsClient = new GcsClientImpl(credentials, fileSystemOptions.getGcsClientOptions());
+    this.gcsClient = new GcsClientImpl(credentials, getGcsClientOptions(fileSystemOptions));
     this.fileSystemOptions = fileSystemOptions;
   }
 
@@ -68,5 +73,11 @@ public class GcsFileSystemImpl implements GcsFileSystem {
   @Override
   public GcsClient getGcsClient() {
     return this.gcsClient;
+  }
+
+  private static GcsClientOptions getGcsClientOptions(GcsFileSystemOptions fileSystemOptions) {
+    return fileSystemOptions.getGcsClientOptions() == null
+        ? GcsClientOptions.builder().build()
+        : fileSystemOptions.getGcsClientOptions();
   }
 }

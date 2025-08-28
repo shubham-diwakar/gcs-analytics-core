@@ -31,3 +31,9 @@ To verify the test coverage, run the following commands from main directory:
 ./mvnw -P coverage clean verify
 ```
 The coverage report can be found in `coverage/target/site/jacoco-aggregate`.
+
+To run integration tests:
+```shell
+gcloud auth application-default login
+./mvnw -Pintegration-test clean verify
+```

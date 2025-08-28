@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.NoCredentials;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,6 +53,24 @@ class GcsFileSystemImplTest {
   @BeforeEach
   void setUp() {
     gcsFileSystem = new GcsFileSystemImpl(mockClient, TEST_GCS_FILESYSTEM_OPTIONS);
+  }
+
+  @Test
+  void constructor_withoutCredentials_createsClientWithApplicationDefaultCredentials()
+      throws IOException {
+    GcsFileSystemImpl gcsFileSystem = new GcsFileSystemImpl(TEST_GCS_FILESYSTEM_OPTIONS);
+    GcsClientImpl gcsClientImpl = (GcsClientImpl) gcsFileSystem.getGcsClient();
+    assertThat(gcsClientImpl.storage.getOptions().getCredentials())
+        .isEqualTo(GoogleCredentials.getApplicationDefault());
+  }
+
+  @Test
+  void constructor_withCredentials_createsClientWithProvidedCredentials() throws IOException {
+    GcsFileSystemImpl gcsFileSystem =
+        new GcsFileSystemImpl(NoCredentials.getInstance(), TEST_GCS_FILESYSTEM_OPTIONS);
+    GcsClientImpl gcsClientImpl = (GcsClientImpl) gcsFileSystem.getGcsClient();
+    assertThat(gcsClientImpl.storage.getOptions().getCredentials())
+        .isEqualTo(NoCredentials.getInstance());
   }
 
   @Test

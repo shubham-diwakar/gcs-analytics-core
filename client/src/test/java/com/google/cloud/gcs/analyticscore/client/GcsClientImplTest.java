@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.auth.Credentials;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.*;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +46,7 @@ class GcsClientImplTest {
     gcsClient =
         new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS) {
           @Override
-          Storage createStorage() {
+          Storage createStorage(Optional<Credentials> credentials) {
             return GcsClientImplTest.this.storage;
           }
         };
@@ -140,21 +142,22 @@ class GcsClientImplTest {
   }
 
   @Test
-  void createStorage_withoutProjectId_throwsIllegalArgumentException() {
-    GcsClientOptions options = GcsClientOptions.builder().build();
-
-    IllegalArgumentException e =
-        assertThrows(IllegalArgumentException.class, () -> new GcsClientImpl(null, options));
-
-    assertThat(e).hasMessageThat().isEqualTo("Project Id cannot be null");
+  void createStorage_withoutProjectId_usesApplicationDefaultQuotaProjectId() throws IOException {
+    GcsClientImpl client = new GcsClientImpl(GcsClientOptions.builder().build());
+    assertThat(client.storage.getOptions().getProjectId())
+        .isEqualTo(GoogleCredentials.getApplicationDefault().getQuotaProjectId());
   }
 
   @Test
-  void createStorage_withNullCredentials_createsNoCredetails() {
-    GcsClientImpl clientWithNullCreds = new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS);
+  void createStorage_withoutCredentials_usesApplicationDefaultCredentials() throws IOException {
+    GcsClientImpl client = new GcsClientImpl(TEST_GCS_CLIENT_OPTIONS);
+    assertThat(client.storage.getOptions().getCredentials())
+        .isEqualTo(GoogleCredentials.getApplicationDefault());
+  }
 
-    assertThat(clientWithNullCreds.storage.getOptions().getCredentials())
-        .isInstanceOf(NoCredentials.class);
+  void createStore_withCredentials_usesProvidedCredentials() throws IOException {
+    GcsClientImpl client = new GcsClientImpl(NoCredentials.getInstance(), TEST_GCS_CLIENT_OPTIONS);
+    assertThat(client.storage.getOptions().getCredentials()).isEqualTo(NoCredentials.getInstance());
   }
 
   @Test
