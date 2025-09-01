@@ -38,5 +38,9 @@ limitations under the License.
             <groupId>org.google.cloud.gcs</groupId>
             <artifactId>client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.google.cloud.gcs</groupId>
+            <artifactId>client</artifactId>
+        </dependency>
     </dependencies>
 </project>

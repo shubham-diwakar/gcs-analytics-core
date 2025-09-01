@@ -22,14 +22,14 @@ import com.google.auto.value.AutoValue;
 public abstract class GcsVectoredReadOptions {
 
   // The shortest distance allowed between chunks for them to be merged
-  abstract int getMinMergeDistance();
+  abstract int getMaxMergeGap();
 
   // The max allowed size of the combined chunk.
   abstract int getMaxMergeSize();
 
   static Builder builder() {
     return new AutoValue_GcsVectoredReadOptions.Builder()
-        .setMinMergeDistance(4 * 1024) // 4 KB
+        .setMaxMergeGap(4 * 1024) // 4 KB
         .setMaxMergeSize(8 * 1024 * 1024); // 8 MB
   }
 
@@ -37,7 +37,7 @@ public abstract class GcsVectoredReadOptions {
   @AutoValue.Builder
   abstract static class Builder {
 
-    abstract Builder setMinMergeDistance(int minMergeDistance);
+    abstract Builder setMaxMergeGap(int minMergeDistance);
 
     abstract Builder setMaxMergeSize(int maxMergeSize);
 

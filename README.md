@@ -1,9 +1,9 @@
-# GCS Analytics Accelerator
+# GCS Analytics Core
 
-The GCS Analytics Accelerator is a Java library designed to optimize and accelerate analytics workloads on Google Cloud Storage (GCS). It provides a common set of functionalities that can be shared across various data processing frameworks like Apache Spark, Trino, and others that use the Hadoop-compatible file system (GCS-Connector) or interact with Apache Iceberg tables through its GCSFileIO implementation.
+The GCS Analytics Core is a Java library designed to optimize and accelerate analytics workloads on Google Cloud Storage (GCS). It provides a common set of functionalities that can be shared across various data processing frameworks like Apache Spark, Trino, and others that use the Hadoop-compatible file system (GCS-Connector) or interact with Apache Iceberg tables through its GCSFileIO implementation.
 
 This library addresses the performance discrepancies and configuration complexities that arise from having multiple
-integration paths to GCS. By centralizing key optimizations, the GCS Analytics Accelerator aims to provide a
+integration paths to GCS. By centralizing key optimizations, the GCS Analytics Core aims to provide a
 consistently high-performance experience for all analytics workloads on GCS.
 Key Features
 - **Vectored I/O**: Improves read performance by fetching multiple data ranges in a single operation, significantly

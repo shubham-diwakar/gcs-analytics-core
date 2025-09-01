@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public abstract class GcsObjectRange {
 
   // The future that will be completed with the contents of the byte range.
-  public abstract CompletableFuture<ByteBuffer> getByteBuffer();
+  public abstract CompletableFuture<ByteBuffer> getByteBufferFuture();
 
   // The starting offset of the byte range.
   public abstract long getOffset();
@@ -39,7 +39,7 @@ public abstract class GcsObjectRange {
   /** Builder for {@link GcsObjectRange}. */
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setByteBuffer(CompletableFuture<ByteBuffer> byteBuffer);
+    public abstract Builder setByteBufferFuture(CompletableFuture<ByteBuffer> byteBuffer);
 
     public abstract Builder setOffset(long offset);
 
