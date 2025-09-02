@@ -30,6 +30,8 @@ public abstract class GcsClientOptions {
 
   public abstract Optional<String> getUserAgent();
 
+  public abstract Optional<GcsReadOptions> getReadOptions();
+
   public static Builder builder() {
     return new AutoValue_GcsClientOptions.Builder();
   }
@@ -45,6 +47,8 @@ public abstract class GcsClientOptions {
     public abstract Builder setServiceHost(String serviceHost);
 
     public abstract Builder setUserAgent(String userAgent);
+
+    public abstract Builder setReadOptions(GcsReadOptions readOptions);
 
     public abstract GcsClientOptions build();
   }
