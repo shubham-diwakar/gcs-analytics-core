@@ -159,6 +159,37 @@ class GcsInputStreamTest {
   }
 
   @Test
+  void read_byteArrayWithNegativeLength_returnsIndexOutOfBound() throws IOException {
+    byte[] buffer = new byte[20];
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, 0, -1 * buffer.length));
+  }
+
+  @Test
+  void read_byteArrayWithNegativeOffset_returnsIndexOutOfBound() throws IOException {
+    byte[] buffer = new byte[20];
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, -1, buffer.length));
+  }
+
+  @Test
+  void read_postEndOfBuffer_returnsIndexOutOfBound() throws IOException {
+    byte[] buffer = new byte[20];
+    assertThrows(
+        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, 15, buffer.length / 2));
+  }
+
+    @Test
+    void read_zeroLength_returnsZeroBytes() throws IOException {
+        byte[] buffer = new byte[20];
+
+        int bytesRead = gcsInputStream.read(buffer, 0,0);
+
+        assertThat(bytesRead).isEqualTo(0);
+        assertThat(gcsInputStream.getPos()).isEqualTo(0);
+    }
+
+  @Test
   void read_afterClose_throwsIOException() throws IOException {
     gcsInputStream.close();
     byte[] buffer = new byte[20];
