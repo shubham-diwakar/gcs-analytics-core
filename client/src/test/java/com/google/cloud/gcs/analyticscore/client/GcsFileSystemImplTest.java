@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import java.io.IOException;
 import java.net.URI;
@@ -54,7 +53,6 @@ class GcsFileSystemImplTest {
   void setUp() {
     gcsFileSystem = new GcsFileSystemImpl(mockClient, TEST_GCS_FILESYSTEM_OPTIONS);
   }
-
 
   @Test
   void constructor_withCredentials_createsClientWithProvidedCredentials() throws IOException {

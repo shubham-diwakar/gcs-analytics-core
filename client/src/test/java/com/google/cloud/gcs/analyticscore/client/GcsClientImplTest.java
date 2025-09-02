@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.auth.Credentials;
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.*;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
@@ -147,7 +146,6 @@ class GcsClientImplTest {
         .isEqualTo("Expected GCS object to be provided. But got: " + directoryItemId);
   }
 
-
   void createStore_withCredentials_usesProvidedCredentials() throws IOException {
     GcsClientImpl client =
         new GcsClientImpl(
@@ -155,28 +153,6 @@ class GcsClientImplTest {
 
     assertThat(client.storage.getOptions().getCredentials()).isEqualTo(NoCredentials.getInstance());
   }
-
-//  @Test
-//  void createStorage_configuresStorageOptionsCorrectly() {
-//    String projectId = "test-project-id";
-//    String clientLibToken = LocalStorageHelper.getOptions().getClientLibToken();
-//    String serviceHost = "http://test-host";
-//    Credentials testCredentials = LocalStorageHelper.getOptions().getCredentials();
-//    GcsClientOptions options =
-//        GcsClientOptions.builder()
-//            .setProjectId(projectId)
-//            .setClientLibToken(clientLibToken)
-//            .setServiceHost(serviceHost)
-//            .build();
-//
-//    GcsClientImpl client = new GcsClientImpl(testCredentials, options, executorServiceSupplier);
-//    StorageOptions storageOptions = client.storage.getOptions();
-//
-//    assertThat(storageOptions.getProjectId()).isEqualTo(projectId);
-//    assertThat(storageOptions.getHost()).isEqualTo(serviceHost);
-//    assertThat(storageOptions.getClientLibToken()).isEqualTo(clientLibToken);
-//    assertThat(storageOptions.getCredentials()).isSameInstanceAs(testCredentials);
-//  }
 
   private void createBlobInStorage(BlobId blobId, String blobContent) {
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
