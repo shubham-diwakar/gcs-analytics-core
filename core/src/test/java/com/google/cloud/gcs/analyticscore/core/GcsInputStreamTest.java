@@ -179,15 +179,15 @@ class GcsInputStreamTest {
         IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, 15, buffer.length / 2));
   }
 
-    @Test
-    void read_zeroLength_returnsZeroBytes() throws IOException {
-        byte[] buffer = new byte[20];
+  @Test
+  void read_zeroLength_returnsZeroBytes() throws IOException {
+    byte[] buffer = new byte[20];
 
-        int bytesRead = gcsInputStream.read(buffer, 0,0);
+    int bytesRead = gcsInputStream.read(buffer, 0, 0);
 
-        assertThat(bytesRead).isEqualTo(0);
-        assertThat(gcsInputStream.getPos()).isEqualTo(0);
-    }
+    assertThat(bytesRead).isEqualTo(0);
+    assertThat(gcsInputStream.getPos()).isEqualTo(0);
+  }
 
   @Test
   void read_afterClose_throwsIOException() throws IOException {
