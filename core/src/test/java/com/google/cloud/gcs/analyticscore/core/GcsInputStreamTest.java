@@ -18,10 +18,7 @@ package com.google.cloud.gcs.analyticscore.core;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.google.cloud.gcs.analyticscore.client.GcsClientOptions;
 import com.google.cloud.gcs.analyticscore.client.GcsFileSystem;
@@ -68,12 +65,24 @@ class GcsInputStreamTest {
   }
 
   @Test
-  void getPos_onNewStream_returnsInitialPosition() {
+  void create_nullFileSystem_throwsIllegalStateException() throws IOException {
+    var exception =
+        assertThrows(IllegalStateException.class, () -> GcsInputStream.create(null, testUri));
+
+    assertThat(exception).hasMessageThat().isEqualTo("GcsFileSystem shouldn't be null");
+  }
+
+  @Test
+  void getPos_onNewStream_returnsInitialPosition() throws IOException {
+    gcsInputStream = new GcsInputStream(mockChannel, testUri);
+
     assertThat(gcsInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void seek_updatesPositionAndUnderlyingChannel() throws IOException {
+    gcsInputStream = new GcsInputStream(mockChannel, testUri);
+
     gcsInputStream.seek(123L);
 
     assertThat(gcsInputStream.getPos()).isEqualTo(123L);
@@ -97,7 +106,16 @@ class GcsInputStreamTest {
   }
 
   @Test
+  void seek_whenChannelThrowsError_propagatesException() throws IOException {
+    doThrow(new IOException("Simulated channel position error")).when(mockChannel).position(100);
+
+    var exception = assertThrows(IOException.class, () -> gcsInputStream.seek(100));
+    assertThat(exception).hasMessageThat().isEqualTo("Simulated channel position error");
+  }
+
+  @Test
   void read_singleByte_readsFromChannelAndUpdatesPosition() throws IOException {
+    gcsInputStream = new GcsInputStream(mockChannel, testUri);
     when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             inv -> {

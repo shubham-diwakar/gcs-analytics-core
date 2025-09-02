@@ -15,8 +15,7 @@
  */
 package com.google.cloud.gcs.analyticscore.core;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 
 import com.google.cloud.gcs.analyticscore.client.*;
 import java.io.IOException;
@@ -43,6 +42,7 @@ public class GcsInputStream extends SeekableInputStream {
   private volatile boolean closed;
 
   static GcsInputStream create(GcsFileSystem gcsFileSystem, URI path) throws IOException {
+    checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
     VectoredSeekableByteChannel channel =
         gcsFileSystem.open(path, getGcsReadOptions(gcsFileSystem.getFileSystemOptions()));
     return new GcsInputStream(channel, path);
@@ -64,11 +64,7 @@ public class GcsInputStream extends SeekableInputStream {
     checkArgument(newPos >= 0, "position can't be negative: %s", newPos);
     checkNotClosed("Cannot seek: already closed");
     position = newPos;
-    try {
-      channel.position(newPos);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e);
-    }
+    channel.position(newPos);
   }
 
   @Override
@@ -77,26 +73,25 @@ public class GcsInputStream extends SeekableInputStream {
     singleByteBuffer.position(0);
 
     int bytesRead = channel.read(singleByteBuffer);
-    if (bytesRead > 0) {
-      position += 1;
-    } else if (bytesRead == -1) {
+    if (bytesRead == -1) {
       return -1;
     }
+    position += bytesRead;
 
     return singleByteBuffer.array()[0] & 0xFF;
   }
 
   @Override
-  public int read(@Nonnull byte[] b, int off, int len) throws IOException {
+  public int read(@Nonnull byte[] buffer, int offset, int length) throws IOException {
     checkNotClosed("Cannot read: already closed");
-    checkNotNull(b, "buffer must not be null");
-    if (off < 0 || len < 0 || len > b.length - off) {
+    checkNotNull(buffer, "buffer must not be null");
+    if (offset < 0 || length < 0 || length > buffer.length - offset) {
       throw new IndexOutOfBoundsException();
     }
-    if (len == 0) {
+    if (length == 0) {
       return 0;
     }
-    int bytesRead = channel.read(ByteBuffer.wrap(b, off, len));
+    int bytesRead = channel.read(ByteBuffer.wrap(buffer, offset, length));
     if (bytesRead > 0) {
       position += bytesRead;
     }
@@ -107,12 +102,8 @@ public class GcsInputStream extends SeekableInputStream {
   public void close() throws IOException {
     if (!closed) {
       closed = true;
-      try {
-        if (channel != null) {
-          channel.close();
-        }
-      } catch (Exception e) {
-        LOG.warn("Error while releasing the read channel resources for {}", gcsPath, e);
+      if (channel != null) {
+        channel.close();
       }
     }
   }
