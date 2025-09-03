@@ -28,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** This is a seekable input stream for GCS objects. It is backed by a GcsFileSystem instance. */
-public class GcsInputStream extends SeekableInputStream {
-  private static final Logger LOG = LoggerFactory.getLogger(GcsInputStream.class);
+public class GoogleCloudStorageInputStream extends SeekableInputStream {
+  private static final Logger LOG = LoggerFactory.getLogger(GoogleCloudStorageInputStream.class);
 
   // Used for single-byte reads to avoid repeated allocation.
   private final ByteBuffer singleByteBuffer = ByteBuffer.wrap(new byte[1]);
@@ -40,15 +40,17 @@ public class GcsInputStream extends SeekableInputStream {
 
   private volatile boolean closed;
 
-  static GcsInputStream create(GcsFileSystem gcsFileSystem, URI path) throws IOException {
+  static GoogleCloudStorageInputStream create(GcsFileSystem gcsFileSystem, URI path)
+      throws IOException {
     checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
     VectoredSeekableByteChannel channel =
         gcsFileSystem.open(
             path, gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
-    return new GcsInputStream(channel, path);
+    return new GoogleCloudStorageInputStream(channel, path);
   }
 
-  public GcsInputStream(VectoredSeekableByteChannel channel, URI path) throws IOException {
+  private GoogleCloudStorageInputStream(VectoredSeekableByteChannel channel, URI path)
+      throws IOException {
     this.channel = channel;
     this.position = 0;
     this.gcsPath = path;

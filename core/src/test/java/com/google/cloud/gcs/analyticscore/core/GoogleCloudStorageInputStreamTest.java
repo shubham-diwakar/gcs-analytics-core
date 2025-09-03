@@ -29,78 +29,78 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-class GcsInputStreamTest {
+class GoogleCloudStorageInputStreamTest {
 
   private final URI testUri = URI.create("gs://test-bucket/test-object");
   @Mock private VectoredSeekableByteChannel mockChannel;
   @Mock private GcsFileSystem mockFileSystem;
-  private GcsInputStream gcsInputStream;
+  @Mock private GcsFileSystemOptions mockFileSystemOptions;
+  @Mock private GcsClientOptions mockClientOptions;
+  private GoogleCloudStorageInputStream googleCloudStorageInputStream;
 
   @BeforeEach
   void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
-    gcsInputStream = new GcsInputStream(mockChannel, testUri);
-  }
-
-  @Test
-  void create_usesFileSystemOptions_openChannelAndCallsConstructor() throws IOException {
-    GcsFileSystemOptions mockFileSystemOptions = mock(GcsFileSystemOptions.class);
-    GcsClientOptions mockClientOptions = mock(GcsClientOptions.class);
     GcsReadOptions readOptions = GcsReadOptions.builder().build();
     when(mockFileSystem.getFileSystemOptions()).thenReturn(mockFileSystemOptions);
     when(mockFileSystemOptions.getGcsClientOptions()).thenReturn(mockClientOptions);
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockFileSystem.open(testUri, readOptions)).thenReturn(mockChannel);
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+  }
 
-    GcsInputStream stream = GcsInputStream.create(mockFileSystem, testUri);
+  @Test
+  void create_usesFileSystemOptions_openChannelAndCallsConstructor() throws IOException {
+    GcsReadOptions readOptions = GcsReadOptions.builder().build();
 
     verify(mockFileSystem).open(testUri, readOptions);
-    assertThat(stream.getPos()).isEqualTo(0);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void create_nullFileSystem_throwsIllegalStateException() throws IOException {
     var exception =
-        assertThrows(IllegalStateException.class, () -> GcsInputStream.create(null, testUri));
+        assertThrows(
+            IllegalStateException.class, () -> GoogleCloudStorageInputStream.create(null, testUri));
 
     assertThat(exception).hasMessageThat().isEqualTo("GcsFileSystem shouldn't be null");
   }
 
   @Test
   void getPos_onNewStream_returnsInitialPosition() throws IOException {
-    gcsInputStream = new GcsInputStream(mockChannel, testUri);
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
 
-    assertThat(gcsInputStream.getPos()).isEqualTo(0);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void seek_updatesPositionAndUnderlyingChannel() throws IOException {
-    gcsInputStream = new GcsInputStream(mockChannel, testUri);
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
 
-    gcsInputStream.seek(123L);
+    googleCloudStorageInputStream.seek(123L);
 
-    assertThat(gcsInputStream.getPos()).isEqualTo(123L);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(123L);
     verify(mockChannel).position(123L);
   }
 
   @Test
   void seek_withNegativePosition_throwsIllegalArgumentException() {
-    var exception = assertThrows(IllegalArgumentException.class, () -> gcsInputStream.seek(-1L));
+    var exception =
+        assertThrows(IllegalArgumentException.class, () -> googleCloudStorageInputStream.seek(-1L));
 
     assertThat(exception).hasMessageThat().contains("position can't be negative: -1");
   }
 
   @Test
   void seek_afterClose_throwsIOException() throws IOException {
-    gcsInputStream.close();
+    googleCloudStorageInputStream.close();
 
-    var exception = assertThrows(IOException.class, () -> gcsInputStream.seek(10));
+    var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.seek(10));
 
     assertThat(exception).hasMessageThat().isEqualTo(testUri + ": Cannot seek: already closed");
   }
@@ -109,13 +109,13 @@ class GcsInputStreamTest {
   void seek_whenChannelThrowsError_propagatesException() throws IOException {
     doThrow(new IOException("Simulated channel position error")).when(mockChannel).position(100);
 
-    var exception = assertThrows(IOException.class, () -> gcsInputStream.seek(100));
+    var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.seek(100));
     assertThat(exception).hasMessageThat().isEqualTo("Simulated channel position error");
   }
 
   @Test
   void read_singleByte_readsFromChannelAndUpdatesPosition() throws IOException {
-    gcsInputStream = new GcsInputStream(mockChannel, testUri);
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
     when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             inv -> {
@@ -123,27 +123,27 @@ class GcsInputStreamTest {
               return 1;
             });
 
-    int result = gcsInputStream.read();
+    int result = googleCloudStorageInputStream.read();
 
     assertThat(result).isEqualTo(77);
-    assertThat(gcsInputStream.getPos()).isEqualTo(1);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(1);
   }
 
   @Test
   void read_singleByteAtEOF_returnsMinusOneAndDoesNotUpdatePosition() throws IOException {
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
 
-    int result = gcsInputStream.read();
+    int result = googleCloudStorageInputStream.read();
 
     assertThat(result).isEqualTo(-1);
-    assertThat(gcsInputStream.getPos()).isEqualTo(0);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void read_singleByteAfterClose_throwsIOException() throws IOException {
-    gcsInputStream.close();
+    googleCloudStorageInputStream.close();
 
-    var exception = assertThrows(IOException.class, () -> gcsInputStream.read());
+    var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.read());
 
     assertThat(exception).hasMessageThat().isEqualTo(testUri + ": Cannot read: already closed");
   }
@@ -159,10 +159,10 @@ class GcsInputStreamTest {
             });
     byte[] buffer = new byte[20];
 
-    int bytesRead = gcsInputStream.read(buffer, 0, buffer.length);
+    int bytesRead = googleCloudStorageInputStream.read(buffer, 0, buffer.length);
 
     assertThat(bytesRead).isEqualTo(data.length);
-    assertThat(gcsInputStream.getPos()).isEqualTo(data.length);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(data.length);
   }
 
   @Test
@@ -170,91 +170,106 @@ class GcsInputStreamTest {
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
     byte[] buffer = new byte[20];
 
-    int bytesRead = gcsInputStream.read(buffer, 0, buffer.length);
+    int bytesRead = googleCloudStorageInputStream.read(buffer, 0, buffer.length);
 
     assertThat(bytesRead).isEqualTo(-1);
-    assertThat(gcsInputStream.getPos()).isEqualTo(0);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void read_byteArrayWithNegativeLength_returnsIndexOutOfBound() throws IOException {
     byte[] buffer = new byte[20];
     assertThrows(
-        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, 0, -1 * buffer.length));
+        IndexOutOfBoundsException.class,
+        () -> googleCloudStorageInputStream.read(buffer, 0, -1 * buffer.length));
   }
 
   @Test
   void read_byteArrayWithNegativeOffset_returnsIndexOutOfBound() throws IOException {
     byte[] buffer = new byte[20];
     assertThrows(
-        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, -1, buffer.length));
+        IndexOutOfBoundsException.class,
+        () -> googleCloudStorageInputStream.read(buffer, -1, buffer.length));
   }
 
   @Test
   void read_postEndOfBuffer_returnsIndexOutOfBound() throws IOException {
     byte[] buffer = new byte[20];
     assertThrows(
-        IndexOutOfBoundsException.class, () -> gcsInputStream.read(buffer, 15, buffer.length / 2));
+        IndexOutOfBoundsException.class,
+        () -> googleCloudStorageInputStream.read(buffer, 15, buffer.length / 2));
   }
 
   @Test
   void read_zeroLength_returnsZeroBytes() throws IOException {
     byte[] buffer = new byte[20];
 
-    int bytesRead = gcsInputStream.read(buffer, 0, 0);
+    int bytesRead = googleCloudStorageInputStream.read(buffer, 0, 0);
 
     assertThat(bytesRead).isEqualTo(0);
-    assertThat(gcsInputStream.getPos()).isEqualTo(0);
+    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void read_afterClose_throwsIOException() throws IOException {
-    gcsInputStream.close();
+    googleCloudStorageInputStream.close();
     byte[] buffer = new byte[20];
 
     var exception =
-        assertThrows(IOException.class, () -> gcsInputStream.read(buffer, 0, buffer.length));
+        assertThrows(
+            IOException.class, () -> googleCloudStorageInputStream.read(buffer, 0, buffer.length));
 
     assertThat(exception).hasMessageThat().isEqualTo(testUri + ": Cannot read: already closed");
   }
 
   @Test
   void close_closesUnderlyingChannel() throws IOException {
-    gcsInputStream.close();
+    googleCloudStorageInputStream.close();
     verify(mockChannel).close();
   }
 
   @Test
   void close_isIdempotent() throws IOException {
-    gcsInputStream.close();
-    gcsInputStream.close();
+    googleCloudStorageInputStream.close();
+    googleCloudStorageInputStream.close();
     verify(mockChannel, times(1)).close();
   }
 
   @Test
   void close_nullChannel() throws IOException {
-    gcsInputStream = new GcsInputStream(null, testUri);
+    GcsFileSystemOptions mockFileSystemOptions = mock(GcsFileSystemOptions.class);
+    GcsClientOptions mockClientOptions = mock(GcsClientOptions.class);
+    GcsReadOptions readOptions = GcsReadOptions.builder().build();
+    when(mockFileSystem.getFileSystemOptions()).thenReturn(mockFileSystemOptions);
+    when(mockFileSystemOptions.getGcsClientOptions()).thenReturn(mockClientOptions);
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(testUri, readOptions)).thenReturn(null);
 
-    gcsInputStream.close();
+    GoogleCloudStorageInputStream googleCloudStorageInputStream =
+        GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+
+    googleCloudStorageInputStream.close();
     verify(mockChannel, times(0)).close();
   }
 
   @Test
   void readFully_throwsUnsupported() {
     assertThrows(
-        UnsupportedOperationException.class, () -> gcsInputStream.readFully(0, new byte[1], 0, 1));
+        UnsupportedOperationException.class,
+        () -> googleCloudStorageInputStream.readFully(0, new byte[1], 0, 1));
   }
 
   @Test
   void readTail_throwsUnsupported() {
     assertThrows(
-        UnsupportedOperationException.class, () -> gcsInputStream.readTail(new byte[1], 0, 1));
+        UnsupportedOperationException.class,
+        () -> googleCloudStorageInputStream.readTail(new byte[1], 0, 1));
   }
 
   @Test
   void readVectored_throwsUnsupported() {
     assertThrows(
         UnsupportedOperationException.class,
-        () -> gcsInputStream.readVectored(Collections.emptyList(), size -> null));
+        () -> googleCloudStorageInputStream.readVectored(Collections.emptyList(), size -> null));
   }
 }
