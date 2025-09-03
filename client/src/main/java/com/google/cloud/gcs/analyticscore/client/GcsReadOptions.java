@@ -16,11 +16,15 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
+import java.util.Map;
 import java.util.Optional;
 
 /** Configuration options for the GCS read options. */
 @AutoValue
 public abstract class GcsReadOptions {
+  private static final String GCS_CHANNEL_READ_CHUNK_SIZE_KEY = "channel.read.chunk-size-bytes";
+  private static final String DECRYPTION_KEY_KEY = "decryption.key";
+  private static final String PROJECT_ID_KEY = "project.id";
 
   public abstract Optional<Integer> getChunkSize();
 
@@ -28,10 +32,30 @@ public abstract class GcsReadOptions {
 
   public abstract Optional<String> getProjectId();
 
-  public abstract Optional<GcsVectoredReadOptions> getGcsVectoredReadOptions();
+  public abstract GcsVectoredReadOptions getGcsVectoredReadOptions();
 
   public static Builder builder() {
-    return new AutoValue_GcsReadOptions.Builder();
+    return new AutoValue_GcsReadOptions.Builder()
+        .setGcsVectoredReadOptions(GcsVectoredReadOptions.builder().build());
+  }
+
+  public static GcsReadOptions createFromOptions(
+      Map<String, String> analyticsCoreOptions, String prefix) {
+    GcsReadOptions.Builder optionsBuilder = builder();
+    if (analyticsCoreOptions.containsKey(prefix + GCS_CHANNEL_READ_CHUNK_SIZE_KEY)) {
+      optionsBuilder.setChunkSize(
+          Integer.parseInt(analyticsCoreOptions.get(prefix + GCS_CHANNEL_READ_CHUNK_SIZE_KEY)));
+    }
+    if (analyticsCoreOptions.containsKey(prefix + DECRYPTION_KEY_KEY)) {
+      optionsBuilder.setDecryptionKey(analyticsCoreOptions.get(prefix + DECRYPTION_KEY_KEY));
+    }
+    if (analyticsCoreOptions.containsKey(prefix + PROJECT_ID_KEY)) {
+      optionsBuilder.setProjectId(analyticsCoreOptions.get(prefix + PROJECT_ID_KEY));
+    }
+    optionsBuilder.setGcsVectoredReadOptions(
+        GcsVectoredReadOptions.createFromOptions(analyticsCoreOptions, prefix));
+
+    return optionsBuilder.build();
   }
 
   /** Builder for {@link GcsReadOptions}. */
