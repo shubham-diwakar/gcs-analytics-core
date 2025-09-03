@@ -154,28 +154,6 @@ class GcsClientImplTest {
     assertThat(client.storage.getOptions().getCredentials()).isEqualTo(NoCredentials.getInstance());
   }
 
-  //  @Test
-  //  void createStorage_configuresStorageOptionsCorrectly() {
-  //    String projectId = "test-project-id";
-  //    String clientLibToken = LocalStorageHelper.getOptions().getClientLibToken();
-  //    String serviceHost = "http://test-host";
-  //    Credentials testCredentials = LocalStorageHelper.getOptions().getCredentials();
-  //    GcsClientOptions options =
-  //        GcsClientOptions.builder()
-  //            .setProjectId(projectId)
-  //            .setClientLibToken(clientLibToken)
-  //            .setServiceHost(serviceHost)
-  //            .build();
-  //
-  //    GcsClientImpl client = new GcsClientImpl(testCredentials, options, executorServiceSupplier);
-  //    StorageOptions storageOptions = client.storage.getOptions();
-  //
-  //    assertThat(storageOptions.getProjectId()).isEqualTo(projectId);
-  //    assertThat(storageOptions.getHost()).isEqualTo(serviceHost);
-  //    assertThat(storageOptions.getClientLibToken()).isEqualTo(clientLibToken);
-  //    assertThat(storageOptions.getCredentials()).isSameInstanceAs(testCredentials);
-  //  }
-
   private void createBlobInStorage(BlobId blobId, String blobContent) {
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
     storage.create(blobInfo, blobContent.getBytes(StandardCharsets.UTF_8));

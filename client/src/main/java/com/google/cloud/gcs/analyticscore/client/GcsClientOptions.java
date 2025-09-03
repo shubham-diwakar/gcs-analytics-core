@@ -16,11 +16,17 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import com.google.auto.value.AutoValue;
+import java.util.Map;
 import java.util.Optional;
 
 /** Configuration options for the GCS client. */
 @AutoValue
 public abstract class GcsClientOptions {
+
+  private static final String PROJECT_ID_KEY = "project-id";
+  private static final String CLIENT_LIB_TOKEN_KEY = "client-lib-token";
+  private static final String SERVICE_HOST_KEY = "service.host";
+  private static final String USER_AGENT_KEY = "user-agent.key";
 
   public abstract Optional<String> getProjectId();
 
@@ -30,10 +36,32 @@ public abstract class GcsClientOptions {
 
   public abstract Optional<String> getUserAgent();
 
-  public abstract Optional<GcsReadOptions> getReadOptions();
+  public abstract GcsReadOptions getGcsReadOptions();
 
   public static Builder builder() {
-    return new AutoValue_GcsClientOptions.Builder();
+    return new AutoValue_GcsClientOptions.Builder()
+        .setGcsReadOptions(GcsReadOptions.builder().build());
+  }
+
+  public static GcsClientOptions createFromOptions(
+      Map<String, String> analyticsCoreOptions, String prefix) {
+    GcsClientOptions.Builder optionsBuilder = builder();
+    if (analyticsCoreOptions.containsKey(prefix + PROJECT_ID_KEY)) {
+      optionsBuilder.setProjectId(analyticsCoreOptions.get(prefix + PROJECT_ID_KEY));
+    }
+    if (analyticsCoreOptions.containsKey(prefix + CLIENT_LIB_TOKEN_KEY)) {
+      optionsBuilder.setClientLibToken(analyticsCoreOptions.get(prefix + CLIENT_LIB_TOKEN_KEY));
+    }
+    if (analyticsCoreOptions.containsKey(prefix + SERVICE_HOST_KEY)) {
+      optionsBuilder.setServiceHost(analyticsCoreOptions.get(prefix + SERVICE_HOST_KEY));
+    }
+    if (analyticsCoreOptions.containsKey(prefix + USER_AGENT_KEY)) {
+      optionsBuilder.setUserAgent(analyticsCoreOptions.get(prefix + USER_AGENT_KEY));
+    }
+    optionsBuilder.setGcsReadOptions(
+        GcsReadOptions.createFromOptions(analyticsCoreOptions, prefix));
+
+    return optionsBuilder.build();
   }
 
   /** Builder for {@link GcsClientOptions}. */
@@ -48,7 +76,8 @@ public abstract class GcsClientOptions {
 
     public abstract Builder setUserAgent(String userAgent);
 
-    public abstract Builder setReadOptions(GcsReadOptions readOptions);
+    public abstract Builder setGcsReadOptions(GcsReadOptions readOptions);
+
 
     public abstract GcsClientOptions build();
   }
