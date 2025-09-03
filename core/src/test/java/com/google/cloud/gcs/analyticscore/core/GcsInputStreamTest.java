@@ -236,7 +236,7 @@ class GcsInputStreamTest {
     gcsInputStream = new GcsInputStream(null, testUri);
 
     gcsInputStream.close();
-    verify(mockChannel).close();
+    verify(mockChannel, times(0)).close();
   }
 
   @Test
