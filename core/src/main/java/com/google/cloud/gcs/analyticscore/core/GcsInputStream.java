@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.IntFunction;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
@@ -44,7 +43,8 @@ public class GcsInputStream extends SeekableInputStream {
   static GcsInputStream create(GcsFileSystem gcsFileSystem, URI path) throws IOException {
     checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
     VectoredSeekableByteChannel channel =
-        gcsFileSystem.open(path, getGcsReadOptions(gcsFileSystem.getFileSystemOptions()));
+        gcsFileSystem.open(
+            path, gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
     return new GcsInputStream(channel, path);
   }
 
@@ -128,11 +128,5 @@ public class GcsInputStream extends SeekableInputStream {
   public void readVectored(List<GcsObjectRange> fileRanges, IntFunction<ByteBuffer> alloc)
       throws IOException {
     throw new UnsupportedOperationException("readVectored is not implemented");
-  }
-
-  private static GcsReadOptions getGcsReadOptions(GcsFileSystemOptions fileSystemOptions) {
-    return Optional.ofNullable(fileSystemOptions.getGcsClientOptions())
-        .flatMap(GcsClientOptions::getReadOptions)
-        .orElseGet(GcsReadOptions.builder()::build);
   }
 }

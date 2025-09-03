@@ -55,7 +55,7 @@ class GcsInputStreamTest {
     GcsReadOptions readOptions = GcsReadOptions.builder().build();
     when(mockFileSystem.getFileSystemOptions()).thenReturn(mockFileSystemOptions);
     when(mockFileSystemOptions.getGcsClientOptions()).thenReturn(mockClientOptions);
-    when(mockClientOptions.getReadOptions()).thenReturn(Optional.of(readOptions));
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockFileSystem.open(testUri, readOptions)).thenReturn(mockChannel);
 
     GcsInputStream stream = GcsInputStream.create(mockFileSystem, testUri);
@@ -229,6 +229,14 @@ class GcsInputStreamTest {
     gcsInputStream.close();
     gcsInputStream.close();
     verify(mockChannel, times(1)).close();
+  }
+
+  @Test
+  void close_nullChannel() throws IOException {
+    gcsInputStream = new GcsInputStream(null, testUri);
+
+    gcsInputStream.close();
+    verify(mockChannel).close();
   }
 
   @Test

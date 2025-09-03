@@ -78,7 +78,6 @@ public abstract class GcsClientOptions {
 
     public abstract Builder setGcsReadOptions(GcsReadOptions readOptions);
 
-
     public abstract GcsClientOptions build();
   }
 }
