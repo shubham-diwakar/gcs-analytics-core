@@ -17,6 +17,8 @@ package com.google.cloud.gcs.analyticscore.client;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
@@ -27,6 +29,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,7 +39,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Random;
 import java.util.function.IntFunction;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -49,6 +54,11 @@ class GcsReadChannelTest {
   private final Supplier<ExecutorService> executorServiceSupplier =
       Suppliers.memoize(() -> Executors.newFixedThreadPool(30));
   private final Storage storage = Mockito.spy(LocalStorageHelper.getOptions().getService());
+
+  @BeforeEach
+  void resetStorageSpy() {
+    Mockito.reset(storage);
+  }
 
   @Test
   void constructor_nullStorage_throwsNullPointerException() {
@@ -467,6 +477,145 @@ class GcsReadChannelTest {
     assertThat(e.getCause().getCause()).hasMessageThat().isEqualTo("Allocation failed");
   }
 
+  // Footer Prefetch Tests
+  private static final int MB = 1024 * 1024;
+
+  @Test
+  void read_whenInFooterRange_isServedFromCache() throws IOException {
+    // Arrange
+    int fileSize = 5 * MB;
+    int prefetchSizeMb = 1;
+    int prefetchSizeBytes = prefetchSizeMb * MB;
+    byte[] objectData = new byte[fileSize];
+    new Random(0).nextBytes(objectData);
+
+    GcsItemId itemId =
+        GcsItemId.builder().setBucketName("test-bucket").setObjectName("test-object-prefetch").build();
+    GcsItemInfo itemInfo =
+        GcsItemInfo.builder()
+            .setItemId(itemId)
+            .setSize(fileSize)
+            .setContentGeneration(0L)
+            .build();
+    BlobId blobId = BlobId.of(itemId.getBucketName(), itemId.getObjectName().get(), 0L);
+    createBlobInStorage(blobId, objectData);
+
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder()
+            .setFooterPrefetchSize(prefetchSizeMb)
+            .setProjectId(TEST_PROJECT_ID)
+            .build();
+
+    ExecutorService directExecutor = MoreExecutors.newDirectExecutorService();
+
+    // Act: Construction triggers prefetch
+    GcsReadChannel channel =
+        new GcsReadChannel(storage, itemInfo, readOptions, () -> directExecutor);
+
+    // Assert prefetch happened: 1 for main channel, 1 for prefetch channel
+    verify(storage, times(2)).reader(Mockito.eq(blobId), Mockito.any());
+
+    // Act again: read from cache
+    long readPosition = fileSize - (prefetchSizeBytes / 2);
+    channel.position(readPosition);
+
+    int readLength = 1024;
+    ByteBuffer readBuffer = ByteBuffer.allocate(readLength);
+    int bytesRead = channel.read(readBuffer);
+
+    // Assert read from cache
+    assertThat(bytesRead).isEqualTo(readLength);
+    // No *new* channels should have been opened for the read itself
+    verify(storage, times(2)).reader(Mockito.eq(blobId), Mockito.any());
+
+    // Verify data correctness
+    readBuffer.flip();
+    byte[] result = new byte[readLength];
+    readBuffer.get(result);
+
+    int expectedOffsetInObject = (int) readPosition;
+    byte[] expectedData = new byte[readLength];
+    System.arraycopy(objectData, expectedOffsetInObject, expectedData, 0, readLength);
+    assertThat(result).isEqualTo(expectedData);
+
+    directExecutor.shutdown();
+  }
+
+  @Test
+  void prefetch_whenDisabled_doesNotPrefetch() throws IOException {
+    // Arrange
+    int fileSize = 5 * MB;
+    byte[] objectData = new byte[fileSize];
+    new Random(0).nextBytes(objectData);
+
+    GcsItemId itemId =
+        GcsItemId.builder()
+            .setBucketName("test-bucket")
+            .setObjectName("test-object-prefetch-disabled")
+            .build();
+    GcsItemInfo itemInfo =
+        GcsItemInfo.builder()
+            .setItemId(itemId)
+            .setSize(fileSize)
+            .setContentGeneration(0L)
+            .build();
+    BlobId blobId = BlobId.of(itemId.getBucketName(), itemId.getObjectName().get(), 0L);
+    createBlobInStorage(blobId, objectData);
+
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder()
+            .setFooterPrefetchSize(0) // Prefetch disabled
+            .setProjectId(TEST_PROJECT_ID)
+            .build();
+
+    ExecutorService directExecutor = MoreExecutors.newDirectExecutorService();
+
+    // Act
+    new GcsReadChannel(storage, itemInfo, readOptions, () -> directExecutor);
+
+    // Assert: Only the main channel should be opened
+    verify(storage, times(1)).reader(Mockito.eq(blobId), Mockito.any());
+    directExecutor.shutdown();
+  }
+
+  @Test
+  void prefetch_whenFileIsSmall_doesNotPrefetch() throws IOException {
+    // Arrange
+    int fileSize = 512 * 1024; // 0.5 MB
+    int prefetchSizeMb = 1;
+    byte[] objectData = new byte[fileSize];
+    new Random(0).nextBytes(objectData);
+
+    GcsItemId itemId =
+        GcsItemId.builder()
+            .setBucketName("test-bucket")
+            .setObjectName("test-object-prefetch-small")
+            .build();
+    GcsItemInfo itemInfo =
+        GcsItemInfo.builder()
+            .setItemId(itemId)
+            .setSize(fileSize)
+            .setContentGeneration(0L)
+            .build();
+    BlobId blobId = BlobId.of(itemId.getBucketName(), itemId.getObjectName().get(), 0L);
+    createBlobInStorage(blobId, objectData);
+
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder()
+            .setFooterPrefetchSize(prefetchSizeMb)
+            .setProjectId(TEST_PROJECT_ID)
+            .build();
+
+    ExecutorService directExecutor = MoreExecutors.newDirectExecutorService();
+
+    // Act
+    new GcsReadChannel(storage, itemInfo, readOptions, () -> directExecutor);
+
+    // Assert: Only the main channel should be opened as file is smaller than prefetch size
+    verify(storage, times(1)).reader(Mockito.eq(blobId), Mockito.any());
+    directExecutor.shutdown();
+  }
+
   private GcsObjectRange createRange(long offset, int length) {
     return GcsObjectRange.builder()
         .setOffset(offset)
@@ -485,6 +634,11 @@ class GcsReadChannelTest {
   private void createBlobInStorage(BlobId blobId, String blobContent) {
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
     storage.create(blobInfo, blobContent.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private void createBlobInStorage(BlobId blobId, byte[] blobContent) {
+    BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
+    storage.create(blobInfo, blobContent);
   }
 
   private String getGcsObjectRangeData(GcsObjectRange range)

@@ -28,7 +28,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.IntFunction;
 import org.slf4j.Logger;
@@ -42,6 +44,11 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
   private GcsItemInfo itemInfo;
   private long position = 0;
   private Supplier<ExecutorService> executorServiceSupplier;
+
+  // Footer cache fields
+  private volatile ByteBuffer footerCache;
+  private long footerCacheStartPosition;
+  private CompletableFuture<Void> footerPrefetchFuture;
 
   GcsReadChannel(
       Storage storage,
@@ -57,13 +64,58 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
     this.itemInfo = itemInfo;
     this.executorServiceSupplier = executorServiceSupplier;
     this.readChannel = openReadChannel(itemInfo, readOptions);
+    prefetchFooter();
   }
 
   @Override
   public int read(ByteBuffer dst) throws IOException {
-    int bytesRead = readChannel.read(dst);
-    position += bytesRead;
+    if (footerCache != null && position >= footerCacheStartPosition) {
+      // The read is within the prefetched footer region.
 
+      // Block until the async prefetch operation is complete.
+      if (footerPrefetchFuture != null) {
+        try {
+          footerPrefetchFuture.get();
+        } catch (Exception e) {
+          // The prefetch failed; rethrow as IOException to the caller.
+          throw new IOException("Footer prefetch failed", e);
+        } finally {
+          // Set to null to prevent waiting again on subsequent reads.
+          footerPrefetchFuture = null;
+        }
+      }
+
+      // If the cache is null after waiting, it means the prefetch operation failed.
+      // Fall back to a standard read from the channel.
+      if (footerCache == null) {
+        return readFromChannel(dst);
+      }
+
+      int cacheOffset = (int) (position - footerCacheStartPosition);
+      if (cacheOffset < footerCache.limit()) {
+        // Data is available in the cache. Copy it to the destination buffer.
+        int bytesToReadFromCache = Math.min(dst.remaining(), footerCache.limit() - cacheOffset);
+
+        // Create a temporary view of the cache buffer to avoid changing its state.
+        ByteBuffer src = footerCache.duplicate();
+        src.position(cacheOffset);
+        src.limit(cacheOffset + bytesToReadFromCache);
+
+        dst.put(src);
+        position += bytesToReadFromCache;
+        return bytesToReadFromCache;
+      }
+    }
+
+    // The read is outside the footer region, or the cache is exhausted.
+    return readFromChannel(dst);
+  }
+
+  private int readFromChannel(ByteBuffer dst) throws IOException {
+    int bytesRead = readChannel.read(dst);
+    if (bytesRead > 0) {
+      position += bytesRead;
+    }
     return bytesRead;
   }
 
@@ -240,6 +292,47 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
                   + " %d "
                   + "for '%s'",
               position, itemInfo.getSize(), itemInfo.getItemId()));
+    }
+  }
+
+  private void prefetchFooter() {
+    int prefetchSizeMb = readOptions.getFooterPrefetchSize();
+    if (prefetchSizeMb <= 0) {
+      return; // Prefetching is disabled.
+    }
+
+    long prefetchSizeBytes = prefetchSizeMb * 1024L * 1024L;
+    long fileSize = itemInfo.getSize();
+
+    if (fileSize > 0 && fileSize > prefetchSizeBytes) {
+      footerCacheStartPosition = fileSize - prefetchSizeBytes;
+      footerCache = ByteBuffer.allocate((int) prefetchSizeBytes);
+      footerPrefetchFuture =
+          CompletableFuture.runAsync(this::readFooterAsync, executorServiceSupplier.get());
+    }
+  }
+
+  private void readFooterAsync() {
+    try (ReadChannel footerReadChannel = openReadChannel(itemInfo, readOptions)) {
+      footerReadChannel.seek(footerCacheStartPosition);
+      int totalRead = 0;
+      while (totalRead < footerCache.capacity()) {
+        int bytesRead = footerReadChannel.read(footerCache);
+        if (bytesRead < 0) {
+          // EOF reached before filling the buffer, which is fine.
+          break;
+        }
+        totalRead += bytesRead;
+      }
+      // Prepare the buffer for reading.
+      footerCache.flip();
+    } catch (IOException e) {
+      LOG.atWarn()
+          .setCause(e)
+          .log("Failed to prefetch footer for {}", itemInfo.getItemId().toString());
+      // In case of failure, nullify the cache to avoid serving partial/incorrect data.
+      footerCache = null;
+      throw new RuntimeException(e);
     }
   }
 }

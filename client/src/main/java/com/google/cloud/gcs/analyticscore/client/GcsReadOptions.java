@@ -25,6 +25,7 @@ public abstract class GcsReadOptions {
   private static final String GCS_CHANNEL_READ_CHUNK_SIZE_KEY = "channel.read.chunk-size-bytes";
   private static final String DECRYPTION_KEY_KEY = "decryption.key";
   private static final String PROJECT_ID_KEY = "project.id";
+  private static final String FOOTER_PREFETCH_SIZE_KEY = "gcs.inputstream.footer.prefetch.size.mb";
 
   public abstract Optional<Integer> getChunkSize();
 
@@ -32,10 +33,14 @@ public abstract class GcsReadOptions {
 
   public abstract Optional<String> getProjectId();
 
+  /** The size of the footer to prefetch in MB. Defaults to 1MB. */
+  public abstract int getFooterPrefetchSize();
+
   public abstract GcsVectoredReadOptions getGcsVectoredReadOptions();
 
   public static Builder builder() {
     return new AutoValue_GcsReadOptions.Builder()
+        .setFooterPrefetchSize(1) // Default to 1MB
         .setGcsVectoredReadOptions(GcsVectoredReadOptions.builder().build());
   }
 
@@ -52,6 +57,10 @@ public abstract class GcsReadOptions {
     if (analyticsCoreOptions.containsKey(prefix + PROJECT_ID_KEY)) {
       optionsBuilder.setProjectId(analyticsCoreOptions.get(prefix + PROJECT_ID_KEY));
     }
+    if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_SIZE_KEY)) {
+      optionsBuilder.setFooterPrefetchSize(
+          Integer.parseInt(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE_KEY)));
+    }
     optionsBuilder.setGcsVectoredReadOptions(
         GcsVectoredReadOptions.createFromOptions(analyticsCoreOptions, prefix));
 
@@ -67,6 +76,8 @@ public abstract class GcsReadOptions {
     public abstract Builder setDecryptionKey(String decryptionKey);
 
     public abstract Builder setProjectId(String projectId);
+
+    public abstract Builder setFooterPrefetchSize(int footerPrefetchSize);
 
     public abstract Builder setGcsVectoredReadOptions(GcsVectoredReadOptions vectoredReadOptions);
 
