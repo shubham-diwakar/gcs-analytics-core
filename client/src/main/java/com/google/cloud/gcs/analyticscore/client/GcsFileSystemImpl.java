@@ -37,6 +37,7 @@ public class GcsFileSystemImpl implements GcsFileSystem {
   private final GcsFileSystemOptions fileSystemOptions;
   private Supplier<ExecutorService> executorService;
 
+  @VisibleForTesting
   public GcsFileSystemImpl(GcsFileSystemOptions fileSystemOptions) {
     initializeExecutorService();
     this.gcsClient = new GcsClientImpl(getGcsClientOptions(fileSystemOptions), executorService);
