@@ -19,7 +19,9 @@ limitations under the License.
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
+    <name>Gcs Analytics Core</name>
+    <description>A Java library designed to optimize and accelerate analytics workloads on Google Cloud Storage (GCS).</description>
+    <url>https://github.com/GoogleCloudPlatform/gcs-analytics-core</url>
     <groupId>com.google.cloud.gcs.analytics</groupId>
     <artifactId>gcs-analytics-core-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -30,6 +32,33 @@ limitations under the License.
         <module>coverage</module>
         <module>distribution</module>
     </modules>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <organization>Google LLC</organization>
+            <organizationUrl>https://www.google.com</organizationUrl>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:git@github.com:GoogleCloudPlatform/gcs-analytics-core.git</connection>
+        <developerConnection>
+            scm:git:git@github.com:GoogleCloudPlatform/gcs-analytics-core.git
+        </developerConnection>
+        <url>git@github.com:GoogleCloudPlatform/gcs-analytics-core.git</url>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/GoogleCloudPlatform/gcs-analytics-core/issues</url>
+    </issueManagement>
 
     <properties>
         <argLine/>
@@ -258,9 +287,56 @@ limitations under the License.
                             <goals>
                                 <goal>prepare-agent</goal>
                             </goals>
+
                         </execution>
                     </executions>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.2.8</version>
+                    <executions>
+                      <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                          <goal>sign</goal>
+                        </goals>
+                      </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.6.3</version> <!-- Use the latest stable version -->
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.6.1</version>
+                </plugin>
+
             </plugins>
         </pluginManagement>
         <extensions>
@@ -270,6 +346,12 @@ limitations under the License.
                 <version>2.2.5</version>
             </extension>
         </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
     <distributionManagement>
