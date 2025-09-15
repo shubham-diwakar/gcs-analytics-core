@@ -71,16 +71,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
             .getFooterPrefetchSize();
   }
 
-  /**
-   * Synchronously fetches and caches the footer of the object. This is an on-demand operation.
-   *
-   * <p>If caching fails, an error is logged, and the cache remains unpopulated, allowing the read
-   * operation to fall back to the main channel.
-   */
   private void cacheFooter() {
-    if (footerCache != null || prefetchSize <= 0) {
-      return;
-    }
 
     try {
       long fileSize = channel.size();
