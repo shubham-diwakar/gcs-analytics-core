@@ -42,6 +42,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
   private volatile boolean closed;
 
+  // Footer cache fields
+  private volatile ByteBuffer footerCache;
+  private long footerCacheStartPosition;
+  private final long prefetchSize;
+
   public static GoogleCloudStorageInputStream create(GcsFileSystem gcsFileSystem, URI path)
       throws IOException {
     checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
@@ -58,6 +63,67 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     this.channel = channel;
     this.position = 0;
     this.gcsPath = path;
+    this.prefetchSize =
+        gcsFileSystem
+            .getFileSystemOptions()
+            .getGcsClientOptions()
+            .getGcsReadOptions()
+            .getFooterPrefetchSize();
+  }
+
+  /**
+   * Synchronously fetches and caches the footer of the object. This is an on-demand operation.
+   *
+   * <p>If caching fails, an error is logged, and the cache remains unpopulated, allowing the read
+   * operation to fall back to the main channel.
+   */
+  private void cacheFooter() {
+    if (footerCache != null || prefetchSize <= 0) {
+      return;
+    }
+
+    try {
+      long fileSize = channel.size();
+      // File is too small to store footer.
+      if (prefetchSize >= fileSize) {
+
+        return;
+      }
+
+      this.footerCacheStartPosition = fileSize - prefetchSize;
+      LOG.debug(
+          "Caching footer for {}. Position: {}, Size: {}",
+          gcsPath,
+          footerCacheStartPosition,
+          prefetchSize);
+
+      // Open a new channel for caching to avoid interfering with the main channel's state.
+      try (VectoredSeekableByteChannel prefetchChannel =
+          gcsFileSystem.open(
+              gcsPath,
+              gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
+        ByteBuffer newFooterCache = ByteBuffer.allocate((int) prefetchSize);
+        prefetchChannel.position(footerCacheStartPosition);
+
+        while (newFooterCache.hasRemaining()) {
+          if (prefetchChannel.read(newFooterCache) == -1) {
+            LOG.warn("Unexpected EOF while caching footer for {}", gcsPath);
+            break;
+          }
+        }
+        newFooterCache.flip();
+        // Assign only after successful population
+        this.footerCache = newFooterCache;
+        LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
+      }
+    } catch (IOException e) {
+      // Log the error but don't fail the operation as this improves performance. The read will fall
+      // back to the main channel.
+      LOG.warn(
+          "Failed to cache footer for {}. Falling back to standard read. Error: {}",
+          gcsPath,
+          e.getMessage());
+    }
   }
 
   @Override
@@ -76,14 +142,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   @Override
   public int read() throws IOException {
     checkNotClosed("Cannot read: already closed");
-    singleByteBuffer.position(0);
-
-    int bytesRead = channel.read(singleByteBuffer);
+    // Delegate to the byte array read method to reuse the cache logic.
+    int bytesRead = read(singleByteBuffer.array(), 0, 1);
     if (bytesRead == -1) {
       return -1;
     }
-    position += bytesRead;
-
     return singleByteBuffer.array()[0] & 0xFF;
   }
 
@@ -91,12 +154,49 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int read(@Nonnull byte[] buffer, int offset, int length) throws IOException {
     checkNotClosed("Cannot read: already closed");
     checkNotNull(buffer, "buffer must not be null");
+
     if (offset < 0 || length < 0 || length > buffer.length - offset) {
       throw new IndexOutOfBoundsException();
     }
     if (length == 0) {
       return 0;
     }
+
+    // If the read is in the footer region and the footer is not yet cached, cache it now.
+    if (footerCache == null && prefetchSize > 0) {
+      try {
+        long fileSize = channel.size();
+        if (position >= fileSize - prefetchSize) {
+          cacheFooter();
+        }
+      } catch (IOException e) {
+        LOG.warn("Failed to get file size for {}: {}", gcsPath, e.getMessage());
+      }
+    }
+
+    // If the footer is cached and the read is within its range, serve from the cache.
+    if (footerCache != null && position >= footerCacheStartPosition) {
+      // Create a duplicate to avoid changing the state of the shared footerCache buffer.
+      ByteBuffer cacheView = footerCache.duplicate();
+      cacheView.position((int) (position - footerCacheStartPosition));
+
+      int bytesToRead = Math.min(length, cacheView.remaining());
+      if (bytesToRead > 0) {
+        cacheView.get(buffer, offset, bytesToRead);
+        position += bytesToRead;
+        LOG.debug("Served {} bytes from footer cache for {}", bytesToRead, gcsPath);
+        return bytesToRead;
+      }
+    }
+
+    // Fallback to a standard channel read.
+    // Making sure the underlying channel is at the correct position, as the previous read might
+    // have
+    // been served from the cache or a seek() might have happened.
+    if (channel.position() != position) {
+      channel.position(position);
+    }
+
     int bytesRead = channel.read(ByteBuffer.wrap(buffer, offset, length));
     if (bytesRead > 0) {
       position += bytesRead;
