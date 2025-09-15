@@ -77,7 +77,6 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
       long fileSize = channel.size();
       // File is too small to store footer.
       if (prefetchSize >= fileSize) {
-
         return;
       }
 
@@ -153,7 +152,6 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
       return 0;
     }
 
-    // If the read is in the footer region and the footer is not yet cached, cache it now.
     if (footerCache == null && prefetchSize > 0) {
       try {
         long fileSize = channel.size();
@@ -181,9 +179,6 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     }
 
     // Fallback to a standard channel read.
-    // Making sure the underlying channel is at the correct position, as the previous read might
-    // have
-    // been served from the cache or a seek() might have happened.
     if (channel.position() != position) {
       channel.position(position);
     }
