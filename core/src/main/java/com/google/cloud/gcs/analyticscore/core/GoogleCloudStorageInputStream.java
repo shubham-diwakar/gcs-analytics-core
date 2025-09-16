@@ -39,6 +39,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   private final VectoredSeekableByteChannel channel;
   private long position;
   private final URI gcsPath;
+  private final GcsFileInfo gcsFileInfo;
 
   private volatile boolean closed;
 
@@ -47,22 +48,30 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   private long footerCacheStartPosition;
   private final long prefetchSize;
 
+  public static GoogleCloudStorageInputStream create(
+      GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
+    VectoredSeekableByteChannel channel =
+        gcsFileSystem.open(
+            gcsFileInfo,
+            gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
+    return new GoogleCloudStorageInputStream(gcsFileSystem, channel, gcsFileInfo);
+  }
+
   public static GoogleCloudStorageInputStream create(GcsFileSystem gcsFileSystem, URI path)
       throws IOException {
     checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
-    VectoredSeekableByteChannel channel =
-        gcsFileSystem.open(
-            path, gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
-    return new GoogleCloudStorageInputStream(gcsFileSystem, channel, path);
+    GcsFileInfo fileInfo = gcsFileSystem.getFileInfo(path);
+    return create(gcsFileSystem, fileInfo);
   }
 
   private GoogleCloudStorageInputStream(
-      GcsFileSystem gcsFileSystem, VectoredSeekableByteChannel channel, URI path)
+      GcsFileSystem gcsFileSystem, VectoredSeekableByteChannel channel, GcsFileInfo gcsFileInfo)
       throws IOException {
     this.gcsFileSystem = gcsFileSystem;
     this.channel = channel;
     this.position = 0;
-    this.gcsPath = path;
+    this.gcsPath = gcsFileInfo.getUri();
+    this.gcsFileInfo = gcsFileInfo;
     this.prefetchSize =
         gcsFileSystem
             .getFileSystemOptions()
@@ -90,7 +99,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
       // Open a new channel for caching to avoid interfering with the main channel's state.
       try (VectoredSeekableByteChannel prefetchChannel =
           gcsFileSystem.open(
-              gcsPath,
+              gcsFileInfo,
               gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
         ByteBuffer newFooterCache = ByteBuffer.allocate((int) prefetchSize);
         prefetchChannel.position(footerCacheStartPosition);
@@ -210,7 +219,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
     try (VectoredSeekableByteChannel byteChannel =
         gcsFileSystem.open(
-            gcsPath,
+            gcsFileInfo,
             gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
       byteChannel.position(position);
       int numberOfBytesRead = byteChannel.read(ByteBuffer.wrap(buffer, offset, length));
@@ -227,9 +236,8 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int readTail(byte[] buffer, int offset, int length) throws IOException {
     try (VectoredSeekableByteChannel byteChannel =
         gcsFileSystem.open(
-            gcsPath,
+            gcsFileInfo,
             gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
-      GcsFileInfo gcsFileInfo = gcsFileSystem.getFileInfo(gcsPath);
       long size = gcsFileInfo.getItemInfo().getSize();
       long startPosition = Math.max(0, size - offset);
       byteChannel.position(startPosition);
