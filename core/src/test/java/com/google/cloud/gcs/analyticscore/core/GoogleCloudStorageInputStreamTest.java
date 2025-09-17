@@ -38,7 +38,6 @@ class GoogleCloudStorageInputStreamTest {
   private final int prefetchSize = 10;
   private final URI testUri = URI.create("gs://test-bucket/test-object");
   @Mock private VectoredSeekableByteChannel mockChannel;
-  @Mock private VectoredSeekableByteChannel mockPrefetchChannel;
   @Mock private GcsFileSystem mockFileSystem;
   @Mock private GcsFileSystemOptions mockFileSystemOptions;
   @Mock private GcsClientOptions mockClientOptions;
