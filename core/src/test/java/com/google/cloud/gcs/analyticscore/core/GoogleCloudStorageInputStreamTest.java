@@ -701,4 +701,28 @@ class GoogleCloudStorageInputStreamTest {
     assertThat(bytesReadFromChannel).isEqualTo(20);
     verify(mockChannel, times(1)).read(any(ByteBuffer.class)); // This is the new read
   }
+
+  @Test
+  void read_withPrefetchSizeGreaterThanIntMax_throwsIllegalArgumentException() throws IOException {
+    long prefetchSize = Integer.MAX_VALUE + 1L;
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    when(mockChannel.size()).thenReturn(prefetchSize * 2L);
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+
+    googleCloudStorageInputStream.seek(prefetchSize);
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> googleCloudStorageInputStream.read(new byte[10], 0, 10));
+
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo(
+            String.format(
+                "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
+                prefetchSize, Integer.MAX_VALUE));
+  }
 }
