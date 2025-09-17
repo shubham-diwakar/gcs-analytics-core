@@ -249,6 +249,7 @@ class GoogleCloudStorageInputStreamTest {
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockChannel.size()).thenReturn(fileSize);
+    when(mockChannel.position()).thenReturn(995L);
     when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
     // Mock channel to fail during the caching read.
     when(mockChannel.read(any(ByteBuffer.class)))
@@ -324,6 +325,7 @@ class GoogleCloudStorageInputStreamTest {
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    when(mockChannel.position()).thenReturn(995L);
     when(mockChannel.size()).thenThrow(new IOException("Simulated size() failure"));
 
     byte[] fallbackData = new byte[] {99};

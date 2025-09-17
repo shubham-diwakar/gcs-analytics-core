@@ -183,16 +183,13 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
         if (bytesToRead > 0) {
           cacheView.get(buffer, offset, bytesToRead);
           position += bytesToRead;
+          channel.position(position);
           LOG.debug("Served {} bytes from footer cache for {}", bytesToRead, gcsPath);
           return bytesToRead;
         }
       }
     }
-
-    // Fallback to a standard channel read.
-    if (channel.position() != position) {
-      channel.position(position);
-    }
+    checkState(channel.position()==position,"Channel position (%s) and position (%s) should be same ",channel.position(),position);
 
     int bytesRead = channel.read(ByteBuffer.wrap(buffer, offset, length));
     if (bytesRead > 0) {
