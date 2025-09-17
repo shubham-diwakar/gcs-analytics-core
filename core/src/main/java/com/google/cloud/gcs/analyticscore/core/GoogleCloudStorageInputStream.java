@@ -189,7 +189,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
         }
       }
     }
-    checkState(channel.position()==position,"Channel position (%s) and position (%s) should be same ",channel.position(),position);
+    checkState(
+        channel.position() == position,
+        "Channel position (%s) and position (%s) should be same ",
+        channel.position(),
+        position);
 
     int bytesRead = channel.read(ByteBuffer.wrap(buffer, offset, length));
     if (bytesRead > 0) {

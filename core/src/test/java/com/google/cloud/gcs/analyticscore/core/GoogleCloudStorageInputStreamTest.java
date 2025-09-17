@@ -16,6 +16,7 @@
 package com.google.cloud.gcs.analyticscore.core;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -655,6 +656,34 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(bytesReadFromChannel).isEqualTo(20);
     verify(mockChannel, times(1)).read(any(ByteBuffer.class)); // This is the new read
+  }
+
+  @Test
+  void cacheFooter_whenRestorePositionFails_doesNotPropagateException() throws IOException {
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    when(mockChannel.size()).thenReturn(fileSize);
+    byte[] footerData = new byte[prefetchSize];
+    when(mockChannel.read(any(ByteBuffer.class)))
+        .thenAnswer(
+            invocation -> {
+              invocation.<ByteBuffer>getArgument(0).put(footerData);
+              return prefetchSize;
+            });
+
+    long seekPosition = 992L;
+    long footerStartPosition = fileSize - prefetchSize;
+    when(mockChannel.position(footerStartPosition)).thenReturn(mockChannel);
+    when(mockChannel.position(seekPosition))
+        .thenReturn(mockChannel)
+        .thenThrow(new IOException("Simulated restore failure"));
+
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream.seek(seekPosition);
+
+    assertDoesNotThrow(() -> googleCloudStorageInputStream.read(new byte[4], 0, 4));
   }
 
   @Test
