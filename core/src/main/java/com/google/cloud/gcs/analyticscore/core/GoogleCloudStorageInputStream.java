@@ -69,7 +69,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
             .getGcsClientOptions()
             .getGcsReadOptions()
             .getFooterPrefetchSize();
-    this.fileSize = channel.size();
+    if(channel!=null) {
+        this.fileSize = channel.size();
+    } else {
+        fileSize = 0;
+    }
   }
 
   // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
