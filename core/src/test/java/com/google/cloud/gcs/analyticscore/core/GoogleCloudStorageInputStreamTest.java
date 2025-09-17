@@ -128,12 +128,12 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_singleByte_notFromCache_useMainChannelAndUpdatesPosition() throws IOException {
-    when(mockClientOptions.getGcsReadOptions())
-        .thenReturn(GcsReadOptions.builder().setFooterPrefetchSize(2097152).build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    when(mockChannel.size()).thenReturn(1000L);
+  void read_whenPrefetchSizeGreaterThanFileSize_usesMainChannel() throws IOException {
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder().setFooterPrefetchSize(fileSize + 1).build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    when(mockChannel.size()).thenReturn(fileSize);
     // Prefetch size is greater than file size, hence no prefetch.
     when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
@@ -141,12 +141,12 @@ class GoogleCloudStorageInputStreamTest {
               inv.<ByteBuffer>getArgument(0).put((byte) 77);
               return 1;
             });
-
     googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
     int result = googleCloudStorageInputStream.read();
 
     assertThat(result).isEqualTo(77);
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(1);
+    verify(mockChannel, times(1)).read(any(ByteBuffer.class));
   }
 
   @Test
@@ -154,14 +154,11 @@ class GoogleCloudStorageInputStreamTest {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    // As we prefetch footer we open two channels main and prefetch.
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
     when(mockChannel.size()).thenReturn(fileSize);
 
     byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(footerData);
@@ -174,8 +171,10 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(result).isEqualTo(55);
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(996L);
-    verify(mockPrefetchChannel).read(any(ByteBuffer.class));
-    verify(mockChannel, never()).read(any(ByteBuffer.class));
+    // Verify caching read and seeks
+    verify(mockChannel, times(1)).read(any(ByteBuffer.class));
+    verify(mockChannel).position(fileSize - prefetchSize);
+    verify(mockChannel, times(2)).position(995L);
   }
 
   @Test
@@ -183,13 +182,11 @@ class GoogleCloudStorageInputStreamTest {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
     when(mockChannel.size()).thenReturn(fileSize);
 
     byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(footerData);
@@ -204,8 +201,10 @@ class GoogleCloudStorageInputStreamTest {
     assertThat(bytesRead).isEqualTo(4);
     assertThat(readBuffer).isEqualTo(new byte[] {52, 53, 54, 55});
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(992L + 4);
-    verify(mockPrefetchChannel).read(any(ByteBuffer.class));
-    verify(mockChannel, never()).read(any(ByteBuffer.class));
+    // Verify caching read and seeks
+    verify(mockChannel, times(1)).read(any(ByteBuffer.class));
+    verify(mockChannel).position(fileSize - prefetchSize);
+    verify(mockChannel, times(2)).position(992L);
   }
 
   @Test
@@ -214,12 +213,10 @@ class GoogleCloudStorageInputStreamTest {
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockChannel.size()).thenReturn(fileSize);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
     // Mock the data that the prefetch channel will return.
     byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(footerData);
@@ -235,47 +232,15 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(bytesRead1).isEqualTo(2);
     assertThat(readBuffer1).isEqualTo(new byte[] {52, 53});
-    verify(mockPrefetchChannel, times(1)).read(any(ByteBuffer.class));
-    verify(mockPrefetchChannel, times(1)).position(fileSize - prefetchSize);
-    verify(mockPrefetchChannel).close();
+    verify(mockChannel, times(1)).read(any(ByteBuffer.class));
+    verify(mockChannel, times(1)).position(fileSize - prefetchSize);
+    verify(mockChannel, times(2)).position(992L);
 
     // Second Read (should use existing cache)
     googleCloudStorageInputStream.seek(995L);
     int bytesRead2 = googleCloudStorageInputStream.read(new byte[3], 0, 3);
 
     assertThat(bytesRead2).isEqualTo(3);
-    // Verify that the prefetch channel(and main channel) was not called again.
-    verifyNoMoreInteractions(mockPrefetchChannel);
-    verify(mockChannel, never()).read(any(ByteBuffer.class));
-  }
-
-  @Test
-  void read_byteArray_fromFooterWhenCacheFails_fallsBackToMainChannel() throws IOException {
-    GcsReadOptions readOptions =
-        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockChannel.size()).thenReturn(fileSize);
-    // Opening Prefetch channel throws error.
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenThrow(new IOException("Simulated cache channel open failure"));
-    byte[] fallbackData = new byte[] {95, 96, 97, 98};
-    when(mockChannel.read(any(ByteBuffer.class)))
-        .thenAnswer(
-            invocation -> {
-              invocation.<ByteBuffer>getArgument(0).put(fallbackData);
-              return fallbackData.length;
-            });
-
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
-    googleCloudStorageInputStream.seek(995L);
-    byte[] readBuffer = new byte[4];
-    int bytesRead = googleCloudStorageInputStream.read(readBuffer, 0, readBuffer.length);
-
-    assertThat(bytesRead).isEqualTo(4);
-    assertThat(readBuffer).isEqualTo(fallbackData);
-    assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(995L + 4);
-    verify(mockChannel).read(any(ByteBuffer.class));
   }
 
   @Test
@@ -284,13 +249,11 @@ class GoogleCloudStorageInputStreamTest {
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockChannel.size()).thenReturn(fileSize);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
-    // Prefetch channel throws an error upon read, leads to using Main channel.
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
-        .thenThrow(new IOException("Simulated cache read failure"));
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    // Mock channel to fail during the caching read.
     when(mockChannel.read(any(ByteBuffer.class)))
+        .thenThrow(new IOException("Simulated cache read failure"))
+        // Subsequent call for fallback read
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put((byte) 99); // Fallback data
@@ -303,8 +266,7 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(result).isEqualTo(99);
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(996L);
-    // Verify fallback read occurred.
-    verify(mockChannel).read(any(ByteBuffer.class));
+    verify(mockChannel, times(2)).read(any(ByteBuffer.class));
   }
 
   @Test
@@ -334,12 +296,10 @@ class GoogleCloudStorageInputStreamTest {
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     when(mockChannel.size()).thenReturn(fileSize);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
 
     byte[] partialFooterData = new byte[] {50, 51, 52, 53, 54};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(partialFooterData);
@@ -354,9 +314,8 @@ class GoogleCloudStorageInputStreamTest {
     int bytesRead = googleCloudStorageInputStream.read(readBuffer, 0, readBuffer.length);
 
     assertThat(bytesRead).isEqualTo(partialFooterData.length);
-    verify(mockPrefetchChannel, times(2)).read(any(ByteBuffer.class));
-    verify(mockPrefetchChannel).position(fileSize - prefetchSize);
-    verify(mockPrefetchChannel).close();
+    verify(mockChannel, times(2)).read(any(ByteBuffer.class));
+    verify(mockChannel, times(3)).position(fileSize - prefetchSize);
   }
 
   @Test
@@ -625,9 +584,7 @@ class GoogleCloudStorageInputStreamTest {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
     when(mockChannel.size()).thenReturn(fileSize);
 
     // First read from non-cache position.
@@ -638,11 +595,10 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(bytesReadFromChannel).isEqualTo(20);
     verify(mockChannel, times(1)).read(any(ByteBuffer.class));
-    verify(mockPrefetchChannel, never()).read(any(ByteBuffer.class));
 
     // Second read from cache position.
-    byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    byte[] footerData = {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(footerData);
@@ -655,7 +611,8 @@ class GoogleCloudStorageInputStreamTest {
 
     assertThat(bytesReadFromCache).isEqualTo(4);
     assertThat(readBuffer).isEqualTo(new byte[] {52, 53, 54, 55});
-    verify(mockPrefetchChannel, times(1)).read(any(ByteBuffer.class));
+    // Caching read + fallback read
+    verify(mockChannel, times(2)).read(any(ByteBuffer.class));
   }
 
   @Test
@@ -663,14 +620,11 @@ class GoogleCloudStorageInputStreamTest {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions)))
-        .thenReturn(mockChannel)
-        .thenReturn(mockPrefetchChannel);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
     when(mockChannel.size()).thenReturn(fileSize);
 
-    // Mock prefetch channel to return data for caching
     byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
-    when(mockPrefetchChannel.read(any(ByteBuffer.class)))
+    when(mockChannel.read(any(ByteBuffer.class)))
         .thenAnswer(
             invocation -> {
               invocation.<ByteBuffer>getArgument(0).put(footerData);
@@ -687,17 +641,16 @@ class GoogleCloudStorageInputStreamTest {
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(fileSize - prefetchSize + 2 + 4);
     assertThat(readBuffer).isEqualTo(new byte[] {52, 53, 54, 55});
 
-    verify(mockPrefetchChannel, times(1)).read(any(ByteBuffer.class));
-    verify(mockPrefetchChannel, times(1)).position(fileSize - prefetchSize);
-    verify(mockPrefetchChannel).close();
-    verify(mockChannel, never()).read(any(ByteBuffer.class));
+    verify(mockChannel, times(1)).read(any(ByteBuffer.class));
+    verify(mockChannel).position(fileSize - prefetchSize);
+    verify(mockChannel, times(2)).position(fileSize - prefetchSize + 2);
 
     // Second read from non-cached position.
+    reset(mockChannel); // Reset mock to verify only the next interaction
     googleCloudStorageInputStream.seek(0);
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(20);
     int bytesReadFromChannel = googleCloudStorageInputStream.read(new byte[20], 0, 20);
 
-    verifyNoMoreInteractions(mockPrefetchChannel);
     assertThat(bytesReadFromChannel).isEqualTo(20);
     verify(mockChannel, times(1)).read(any(ByteBuffer.class)); // This is the new read
   }

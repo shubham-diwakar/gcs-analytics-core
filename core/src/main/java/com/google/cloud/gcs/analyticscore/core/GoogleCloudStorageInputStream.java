@@ -70,48 +70,41 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
             .getFooterPrefetchSize();
   }
 
+  // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
   private void cacheFooter() {
-
+    long originalPosition = -1;
     try {
+      originalPosition = getPos();
       long fileSize = channel.size();
       // File is too small to store footer.
       // TODO(shubhamdiwakar): Implement Small object caching.
       if (prefetchSize >= fileSize) {
         return;
       }
-
+      if (prefetchSize > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException(
+            String.format(
+                "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
+                prefetchSize, Integer.MAX_VALUE));
+      }
       long footerCacheStartPosition = fileSize - prefetchSize;
       LOG.debug(
           "Caching footer for {}. Position: {}, Size: {}",
           gcsPath,
           footerCacheStartPosition,
           prefetchSize);
+      ByteBuffer footerByteBuffer = ByteBuffer.allocate((int) prefetchSize);
+      channel.position(footerCacheStartPosition);
 
-      // Open a new channel for caching to avoid interfering with the main channel's state.
-      try (VectoredSeekableByteChannel prefetchChannel =
-          gcsFileSystem.open(
-              gcsPath,
-              gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
-        if (prefetchSize > Integer.MAX_VALUE) {
-          throw new IllegalArgumentException(
-              String.format(
-                  "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
-                  prefetchSize, Integer.MAX_VALUE));
+      while (footerByteBuffer.hasRemaining()) {
+        if (channel.read(footerByteBuffer) == -1) {
+          LOG.warn("Unexpected EOF while caching footer for {}", gcsPath);
+          break;
         }
-        ByteBuffer footerByteBuffer = ByteBuffer.allocate((int) prefetchSize);
-        prefetchChannel.position(footerCacheStartPosition);
-
-        while (footerByteBuffer.hasRemaining()) {
-          if (prefetchChannel.read(footerByteBuffer) == -1) {
-            LOG.warn("Unexpected EOF while caching footer for {}", gcsPath);
-            break;
-          }
-        }
-        footerByteBuffer.flip();
-        // Assign only after successful population
-        this.footerCache = footerByteBuffer;
-        LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
       }
+      footerByteBuffer.flip();
+      this.footerCache = footerByteBuffer;
+      LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
     } catch (IOException e) {
       // Log the error but don't fail the operation as this improves performance. The read will fall
       // back to the main channel.
@@ -119,6 +112,14 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
           "Failed to cache footer for {}. Falling back to standard read. Error: {}",
           gcsPath,
           e.getMessage());
+    } finally {
+      if (originalPosition != -1) {
+        try {
+          seek(originalPosition);
+        } catch (IOException e) {
+          LOG.warn("Failed to restore position after footer cache for {}", gcsPath, e);
+        }
+      }
     }
   }
 
