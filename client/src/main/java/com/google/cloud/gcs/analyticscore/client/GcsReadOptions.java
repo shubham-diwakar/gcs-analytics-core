@@ -60,7 +60,7 @@ public abstract class GcsReadOptions {
     }
     if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_SIZE)) {
       optionsBuilder.setFooterPrefetchSize(
-          Integer.parseInt(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE)));
+          Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE)));
     }
     optionsBuilder.setGcsVectoredReadOptions(
         GcsVectoredReadOptions.createFromOptions(analyticsCoreOptions, prefix));

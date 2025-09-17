@@ -50,6 +50,13 @@ class GoogleCloudStorageInputStreamTest {
     when(mockFileSystemOptions.getGcsClientOptions()).thenReturn(mockClientOptions);
   }
 
+  GoogleCloudStorageInputStream defaultGcsInputStream() throws IOException {
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
+    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
+        .thenReturn(mockChannel);
+    return GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+  }
+
   @Test
   void create_usesFileSystemOptions_openMainChannelAndCallsConstructor() throws IOException {
     GcsReadOptions readOptions =
@@ -75,21 +82,14 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void getPos_onNewStream_returnsInitialPosition() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
 
     assertThat(googleCloudStorageInputStream.getPos()).isEqualTo(0);
   }
 
   @Test
   void seek_updatesPositionAndUnderlyingChannel() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
 
     googleCloudStorageInputStream.seek(123L);
 
@@ -99,10 +99,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void seek_withNegativePosition_throwsIllegalArgumentException() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
 
     var exception =
         assertThrows(IllegalArgumentException.class, () -> googleCloudStorageInputStream.seek(-1L));
@@ -112,10 +109,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void seek_afterClose_throwsIOException() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     googleCloudStorageInputStream.close();
 
     var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.seek(10));
@@ -125,10 +119,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void seek_whenChannelThrowsError_propagatesException() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     doThrow(new IOException("Simulated channel position error")).when(mockChannel).position(100);
 
     var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.seek(100));
@@ -318,10 +309,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_singleByteAtEOF_returnsMinusOneAndDoesNotUpdatePosition() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
 
     int result = googleCloudStorageInputStream.read();
@@ -332,10 +320,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_singleByteAfterClose_throwsIOException() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     googleCloudStorageInputStream.close();
 
     var exception = assertThrows(IOException.class, () -> googleCloudStorageInputStream.read());
@@ -401,9 +386,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_byteArrayAtEOF_returnsMinusOneAndDoesNotUpdatePosition() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
     byte[] buffer = new byte[20];
 
@@ -415,9 +398,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_byteArrayWithNegativeLength_returnsIndexOutOfBound() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     byte[] buffer = new byte[20];
 
     assertThrows(
@@ -427,9 +408,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_byteArrayWithNegativeOffset_returnsIndexOutOfBound() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     byte[] buffer = new byte[20];
 
     assertThrows(
@@ -439,9 +418,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_postEndOfBuffer_returnsIndexOutOfBound() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     byte[] buffer = new byte[20];
 
     assertThrows(
@@ -451,10 +428,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_zeroLength_returnsZeroBytes() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), eq(GcsReadOptions.builder().build())))
-        .thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     byte[] buffer = new byte[20];
 
     int bytesRead = googleCloudStorageInputStream.read(buffer, 0, 0);
@@ -465,9 +439,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void read_afterClose_throwsIOException() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     googleCloudStorageInputStream.close();
     byte[] buffer = new byte[20];
 
@@ -480,9 +452,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void close_closesUnderlyingChannel() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
 
     googleCloudStorageInputStream.close();
 
@@ -491,9 +461,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void close_isIdempotent() throws IOException {
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     googleCloudStorageInputStream.close();
 
     googleCloudStorageInputStream.close();
@@ -575,9 +543,7 @@ class GoogleCloudStorageInputStreamTest {
   @Test
   void readFully_withInvalidBufferArgs_throwsIndexOutOfBoundsException() throws IOException {
     byte[] buffer = new byte[10];
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(GcsReadOptions.builder().build());
-    when(mockFileSystem.open(eq(testUri), any(GcsReadOptions.class))).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
 
     assertThrows(
         IndexOutOfBoundsException.class,
@@ -632,18 +598,15 @@ class GoogleCloudStorageInputStreamTest {
   @Test
   void readTail_zeroLength_returnsZero() throws IOException {
     byte[] buffer = new byte[20];
-    GcsReadOptions readOptions = GcsReadOptions.builder().build();
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
     VectoredSeekableByteChannel newMockChannel = mock(VectoredSeekableByteChannel.class);
     GcsFileInfo mockFileInfo = mock(GcsFileInfo.class);
     GcsItemInfo mockItemInfo = mock(GcsItemInfo.class);
 
-    when(mockFileSystem.open(testUri, readOptions)).thenReturn(newMockChannel);
     when(mockFileSystem.getFileInfo(testUri)).thenReturn(mockFileInfo);
     when(mockFileInfo.getItemInfo()).thenReturn(mockItemInfo);
     when(mockItemInfo.getSize()).thenReturn(1024L);
 
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     int bytesRead = googleCloudStorageInputStream.readTail(buffer, 0, 0);
 
     assertThat(bytesRead).isEqualTo(0);
@@ -651,10 +614,7 @@ class GoogleCloudStorageInputStreamTest {
 
   @Test
   void readVectored_throwsUnsupported() throws IOException {
-    GcsReadOptions readOptions = GcsReadOptions.builder().build();
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockFileSystem.open(testUri, readOptions)).thenReturn(mockChannel);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+    googleCloudStorageInputStream = defaultGcsInputStream();
     assertThrows(
         UnsupportedOperationException.class,
         () -> googleCloudStorageInputStream.readVectored(Collections.emptyList(), size -> null));

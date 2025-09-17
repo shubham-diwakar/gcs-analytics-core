@@ -14,7 +14,7 @@ This flag controls the size (in bytes) of the footer to prefetch.
 -   **Default Value**: `2097152` (2 MB)
 -   **Usage**:
     -   To **disable** footer prefetching, set this value to `0`.
-    
+
 
 **Example:**
 To disable prefetching:
