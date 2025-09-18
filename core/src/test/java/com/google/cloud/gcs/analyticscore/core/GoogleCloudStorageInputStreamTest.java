@@ -349,6 +349,36 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
+  void read_outsideFromFooter_withSimulatedPositionError() throws IOException {
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockChannel.size()).thenReturn(fileSize);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+
+    byte[] footerData = new byte[] {50, 51, 52, 53, 54, 55, 56, 57, 58, 59};
+    when(mockChannel.read(any(ByteBuffer.class)))
+        .thenAnswer(
+            invocation -> {
+              invocation.<ByteBuffer>getArgument(0).put(footerData);
+              return footerData.length;
+            });
+
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+
+    googleCloudStorageInputStream.seek((fileSize - prefetchSize)-1);
+    byte[] readBuffer = new byte[prefetchSize];
+    when(mockChannel.position())
+        .thenReturn(0L);
+    var exception =
+        assertThrows(
+            IllegalStateException.class,
+            () -> googleCloudStorageInputStream.read(readBuffer, 0, readBuffer.length));
+
+    assertThat(exception).hasMessageThat().isEqualTo(String.format("Channel position (0) and stream position (989) should be the same"));
+  }
+
+  @Test
   void read_byteArrayAtEOF_returnsMinusOneAndDoesNotUpdatePosition() throws IOException {
     googleCloudStorageInputStream = defaultGcsInputStream();
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
