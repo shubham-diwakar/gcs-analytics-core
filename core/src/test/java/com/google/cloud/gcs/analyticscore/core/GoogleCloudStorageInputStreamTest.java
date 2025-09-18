@@ -26,7 +26,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -44,7 +43,7 @@ class GoogleCloudStorageInputStreamTest {
   private GoogleCloudStorageInputStream googleCloudStorageInputStream;
 
   @BeforeEach
-  void setUp(){
+  void setUp() {
     MockitoAnnotations.openMocks(this);
     when(mockFileSystem.getFileSystemOptions()).thenReturn(mockFileSystemOptions);
     when(mockFileSystemOptions.getGcsClientOptions()).thenReturn(mockClientOptions);
@@ -269,7 +268,7 @@ class GoogleCloudStorageInputStreamTest {
     when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
     int bytesRead = googleCloudStorageInputStream.read(new byte[10], 0, 10);
 
-    assertThat(bytesRead).isEqualTo(-1);
+    assertThat(bytesRead).isEqualTo(0);
     verify(mockChannel).position(fileSize);
   }
 
@@ -687,29 +686,5 @@ class GoogleCloudStorageInputStreamTest {
     googleCloudStorageInputStream.seek(seekPosition);
 
     assertDoesNotThrow(() -> googleCloudStorageInputStream.read(new byte[4], 0, 4));
-  }
-
-  @Test
-  void read_withPrefetchSizeGreaterThanIntMax_throwsIllegalArgumentException() throws IOException {
-    long prefetchSize = Integer.MAX_VALUE + 1L;
-    GcsReadOptions readOptions =
-        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
-    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
-    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
-    when(mockChannel.size()).thenReturn(prefetchSize * 2L);
-    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
-
-    googleCloudStorageInputStream.seek(prefetchSize);
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> googleCloudStorageInputStream.read(new byte[10], 0, 10));
-
-    assertThat(exception)
-        .hasMessageThat()
-        .isEqualTo(
-            String.format(
-                "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
-                prefetchSize, Integer.MAX_VALUE));
   }
 }

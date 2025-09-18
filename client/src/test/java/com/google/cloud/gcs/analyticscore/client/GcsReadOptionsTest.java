@@ -17,6 +17,7 @@
 package com.google.cloud.gcs.analyticscore.client;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
@@ -63,5 +64,26 @@ class GcsReadOptionsTest {
     assertThat(readOptions.getFooterPrefetchSize()).isEqualTo(2 * 1024 * 1024); // Default value
     assertThat(vectoredReadOptions.getMaxMergeGap()).isEqualTo(4 * 1024); // Default value
     assertThat(vectoredReadOptions.getMaxMergeSize()).isEqualTo(8 * 1024 * 1024); // Default value
+  }
+
+  @Test
+  void createFromOptions_withPrefetchGreaterThanIntegerMax_shouldThrowIllegalArgumentException() {
+    Map<String, String> properties =
+        ImmutableMap.<String, String>builder()
+            .put("fs.gs.footer.prefetch.size", "2147483648")
+            .build();
+    String prefix = "fs.gs.";
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> GcsReadOptions.createFromOptions(properties, prefix));
+
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo(
+            String.format(
+                "prefetchSize (%s) cannot be greater than Integer.MAX_VALUE (%d)",
+                "2147483648", Integer.MAX_VALUE));
   }
 }

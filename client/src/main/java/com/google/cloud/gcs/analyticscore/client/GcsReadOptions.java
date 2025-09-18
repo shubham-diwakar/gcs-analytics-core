@@ -59,8 +59,15 @@ public abstract class GcsReadOptions {
       optionsBuilder.setProjectId(analyticsCoreOptions.get(prefix + PROJECT_ID_KEY));
     }
     if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_SIZE)) {
-      optionsBuilder.setFooterPrefetchSize(
-          Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE)));
+      long prefetchSize = Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE));
+      if (prefetchSize > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException(
+            String.format(
+                "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
+                prefetchSize, Integer.MAX_VALUE));
+      } else {
+        optionsBuilder.setFooterPrefetchSize(prefetchSize);
+      }
     }
     optionsBuilder.setGcsVectoredReadOptions(
         GcsVectoredReadOptions.createFromOptions(analyticsCoreOptions, prefix));
