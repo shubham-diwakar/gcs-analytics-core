@@ -244,6 +244,36 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
+  void read_atEndOfCache_fallsBackToMainChannelForEof() throws IOException {
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(eq(testUri), eq(readOptions))).thenReturn(mockChannel);
+    when(mockChannel.size()).thenReturn(fileSize);
+    when(mockChannel.position()).thenReturn(1000L);
+
+    byte[] footerData = new byte[prefetchSize];
+    when(mockChannel.read(any(ByteBuffer.class)))
+        .thenAnswer(
+            invocation -> {
+              invocation.<ByteBuffer>getArgument(0).put(footerData);
+              return prefetchSize;
+            });
+
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+
+    googleCloudStorageInputStream.seek(fileSize - prefetchSize);
+    googleCloudStorageInputStream.read(new byte[1], 0, 1);
+
+    googleCloudStorageInputStream.seek(fileSize);
+    when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
+    int bytesRead = googleCloudStorageInputStream.read(new byte[10], 0, 10);
+
+    assertThat(bytesRead).isEqualTo(-1);
+    verify(mockChannel).position(fileSize);
+  }
+
+  @Test
   void read_fromFooterWhenCacheReadFails_fallsBackToMainChannel() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
