@@ -606,8 +606,10 @@ class GoogleCloudStorageInputStreamTest {
     assertThat(bytesRead).isEqualTo(0);
   }
 
+  @Test
   void readVectored_delegatesToReadChannelAndDoesNotChangeState() throws IOException {
-    long positionBeforeVectoredRead = mockChannel.position();
+      googleCloudStorageInputStream = defaultGcsInputStream();
+      long positionBeforeVectoredRead = googleCloudStorageInputStream.getPos();
     googleCloudStorageInputStream.readVectored(any(), any());
 
     verify(mockChannel).readVectored(any(), any());
