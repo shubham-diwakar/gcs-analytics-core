@@ -77,7 +77,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   }
 
   // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
-  private void cacheFooter() {
+  private void cacheFooter() throws IOException {
     long originalPosition = -1;
     try {
       originalPosition = getPos();
@@ -112,13 +112,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
           gcsPath,
           e.getMessage());
     } finally {
-      if (originalPosition != -1) {
-        try {
-          seek(originalPosition);
-        } catch (IOException e) {
-          LOG.warn("Failed to restore position after footer cache for {}", gcsPath, e);
-        }
-      }
+      seek(originalPosition);
     }
   }
 

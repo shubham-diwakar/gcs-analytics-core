@@ -693,7 +693,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void cacheFooter_whenRestorePositionFails_doesNotPropagateException() throws IOException {
+  void cacheFooter_whenRestorePositionFails_propagatesException() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -717,6 +717,10 @@ class GoogleCloudStorageInputStreamTest {
     googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
     googleCloudStorageInputStream.seek(seekPosition);
 
-    assertDoesNotThrow(() -> googleCloudStorageInputStream.read(new byte[4], 0, 4));
+    IOException exception =
+        assertThrows(
+            IOException.class, () -> googleCloudStorageInputStream.read(new byte[4], 0, 4));
+
+    assertThat(exception).hasMessageThat().isEqualTo("Simulated restore failure");
   }
 }
