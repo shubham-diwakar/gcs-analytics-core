@@ -39,8 +39,13 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   private final VectoredSeekableByteChannel channel;
   private long position;
   private final URI gcsPath;
+  private final long fileSize;
 
   private volatile boolean closed;
+
+  // Footer cache fields
+  private volatile ByteBuffer footerCache;
+  private final long prefetchSize;
 
   public static GoogleCloudStorageInputStream create(GcsFileSystem gcsFileSystem, URI path)
       throws IOException {
@@ -58,6 +63,74 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     this.channel = channel;
     this.position = 0;
     this.gcsPath = path;
+    this.prefetchSize =
+        gcsFileSystem
+            .getFileSystemOptions()
+            .getGcsClientOptions()
+            .getGcsReadOptions()
+            .getFooterPrefetchSize();
+    if (channel != null) {
+      this.fileSize = channel.size();
+    } else {
+      fileSize = 0;
+    }
+  }
+
+  // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
+  private void cacheFooter() throws IOException {
+    long originalPosition = -1;
+    try {
+      originalPosition = getPos();
+      // File is too small to store footer.
+      // TODO(shubhamdiwakar): Implement Small object caching.
+      if (prefetchSize >= fileSize) {
+        return;
+      }
+      long footerCacheStartPosition = fileSize - prefetchSize;
+      LOG.debug(
+          "Caching footer for {}. Position: {}, Size: {}",
+          gcsPath,
+          footerCacheStartPosition,
+          prefetchSize);
+      ByteBuffer footerByteBuffer = ByteBuffer.allocate((int) prefetchSize);
+      channel.position(footerCacheStartPosition);
+
+      while (footerByteBuffer.hasRemaining()) {
+        if (channel.read(footerByteBuffer) == -1) {
+          LOG.warn("Unexpected EOF while caching footer for {}", gcsPath);
+          break;
+        }
+      }
+      footerByteBuffer.flip();
+      this.footerCache = footerByteBuffer;
+      LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
+    } catch (IOException e) {
+      // Log the error but don't fail the operation as this improves performance. The read will fall
+      // back to the main channel.
+      LOG.warn(
+          "Failed to cache footer for {}. Falling back to standard read. Error: {}",
+          gcsPath,
+          e.getMessage());
+    } finally {
+      seek(originalPosition);
+    }
+  }
+
+  private int serveFromFooterCache(byte[] buffer, int offset, int length) throws IOException {
+    // TODO(shubhamdiwakar): Refactor to use GcsFileInfo instead of fileSize.
+    long footerCacheStartPosition = fileSize - prefetchSize;
+    // Create a duplicate to avoid changing the state of the shared footerCache buffer.
+    ByteBuffer cacheView = footerCache.duplicate();
+    cacheView.position((int) (position - footerCacheStartPosition));
+
+    int bytesToRead = Math.min(length, cacheView.remaining());
+    if (bytesToRead > 0) {
+      cacheView.get(buffer, offset, bytesToRead);
+      position += bytesToRead;
+      channel.position(position);
+      LOG.debug("Served {} bytes from footer cache for {}", bytesToRead, gcsPath);
+    }
+    return bytesToRead;
   }
 
   @Override
@@ -76,14 +149,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   @Override
   public int read() throws IOException {
     checkNotClosed("Cannot read: already closed");
-    singleByteBuffer.position(0);
-
-    int bytesRead = channel.read(singleByteBuffer);
+    // Delegate to the byte array read method to reuse the cache logic.
+    int bytesRead = read(singleByteBuffer.array(), 0, 1);
     if (bytesRead == -1) {
       return -1;
     }
-    position += bytesRead;
-
     return singleByteBuffer.array()[0] & 0xFF;
   }
 
@@ -91,12 +161,30 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int read(@Nonnull byte[] buffer, int offset, int length) throws IOException {
     checkNotClosed("Cannot read: already closed");
     checkNotNull(buffer, "buffer must not be null");
+
     if (offset < 0 || length < 0 || length > buffer.length - offset) {
       throw new IndexOutOfBoundsException();
     }
     if (length == 0) {
       return 0;
     }
+
+    if (footerCache == null && prefetchSize > 0 && position >= fileSize - prefetchSize) {
+      cacheFooter();
+    }
+
+    // If the footer is cached and the read is within its range, serve from the cache.
+    if (footerCache != null && position >= fileSize - prefetchSize) {
+      return serveFromFooterCache(buffer, offset, length);
+    }
+
+    long channelPosition = channel.position();
+    checkState(
+        channelPosition == position,
+        "Channel position (%s) and stream position (%s) should be the same",
+        channelPosition,
+        position);
+
     int bytesRead = channel.read(ByteBuffer.wrap(buffer, offset, length));
     if (bytesRead > 0) {
       position += bytesRead;
@@ -154,6 +242,6 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   @Override
   public void readVectored(List<GcsObjectRange> fileRanges, IntFunction<ByteBuffer> alloc)
       throws IOException {
-     channel.readVectored(fileRanges, alloc);
+    channel.readVectored(fileRanges, alloc);
   }
 }
