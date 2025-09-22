@@ -50,7 +50,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
   public static GoogleCloudStorageInputStream create(
       GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
-      checkState(gcsFileInfo != null,"GcsFileInfo shouldn't be null");
+    checkState(gcsFileInfo != null, "GcsFileInfo shouldn't be null");
     VectoredSeekableByteChannel channel =
         gcsFileSystem.open(
             gcsFileInfo,
@@ -172,10 +172,10 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
     long channelPosition = channel.position();
     checkState(
-            channelPosition == position,
-            "Channel position (%s) and stream position (%s) should be the same",
-            channelPosition,
-            position);
+        channelPosition == position,
+        "Channel position (%s) and stream position (%s) should be the same",
+        channelPosition,
+        position);
 
     int bytesRead = channel.read(byteBuffer);
     if (bytesRead > 0) {
