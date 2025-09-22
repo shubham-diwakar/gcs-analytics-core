@@ -286,7 +286,7 @@ class GoogleCloudStorageInputStreamTest {
     int bytesRead = googleCloudStorageInputStream.read(new byte[10], 0, 10);
 
     assertThat(bytesRead).isEqualTo(0);
-    verify(mockChannel).position(fileSize);
+    verify(mockChannel, times(2)).position(fileSize);
   }
 
   @Test
