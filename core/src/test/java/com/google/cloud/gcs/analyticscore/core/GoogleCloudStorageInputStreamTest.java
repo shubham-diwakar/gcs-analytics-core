@@ -92,6 +92,18 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
+  void create_whenGetFileInfoReturnsNull_throwsIllegalStateException() throws IOException {
+    when(mockFileSystem.getFileInfo(testUri)).thenReturn(null);
+
+    var exception =
+        assertThrows(
+            IllegalStateException.class,
+            () -> GoogleCloudStorageInputStream.create(mockFileSystem, testUri));
+
+    assertThat(exception).hasMessageThat().isEqualTo("GcsFileInfo shouldn't be null");
+  }
+
+  @Test
   void create_nullFileSystem_throwsIllegalStateException() throws IOException {
     var exception =
         assertThrows(

@@ -50,6 +50,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
   public static GoogleCloudStorageInputStream create(
       GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
+      checkState(gcsFileInfo != null,"GcsFileInfo shouldn't be null");
     VectoredSeekableByteChannel channel =
         gcsFileSystem.open(
             gcsFileInfo,

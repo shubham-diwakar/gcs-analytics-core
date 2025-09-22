@@ -121,7 +121,8 @@ class GoogleCloudStorageInputStreamIntegrationTest {
   @ValueSource(
           strings = {"tpcds_customer_sf1.parquet",
                   "tpcds_customer_sf10.parquet",
-                  "tpcds_customer_sf100.parquet"})
+                  "tpcds_customer_sf100.parquet",
+                  "tpch_customer_sf10.parquet"})
   void parseParquetSchema_performsBetterWithFooterPrefetchingEnabled(String fileName) throws IOException {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
 
