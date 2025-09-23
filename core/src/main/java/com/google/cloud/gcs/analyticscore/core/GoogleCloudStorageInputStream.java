@@ -40,6 +40,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   private long position;
   private final URI gcsPath;
   private final long fileSize;
+  private final GcsFileInfo gcsFileInfo;
 
   private volatile boolean closed;
 
@@ -47,33 +48,37 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   private volatile ByteBuffer footerCache;
   private final long prefetchSize;
 
+  public static GoogleCloudStorageInputStream create(
+      GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
+    checkState(gcsFileInfo != null, "GcsFileInfo shouldn't be null");
+    VectoredSeekableByteChannel channel =
+        gcsFileSystem.open(
+            gcsFileInfo,
+            gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
+    return new GoogleCloudStorageInputStream(gcsFileSystem, channel, gcsFileInfo);
+  }
+
   public static GoogleCloudStorageInputStream create(GcsFileSystem gcsFileSystem, URI path)
       throws IOException {
     checkState(gcsFileSystem != null, "GcsFileSystem shouldn't be null");
-    VectoredSeekableByteChannel channel =
-        gcsFileSystem.open(
-            path, gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions());
-    return new GoogleCloudStorageInputStream(gcsFileSystem, channel, path);
+    GcsFileInfo fileInfo = gcsFileSystem.getFileInfo(path);
+    return create(gcsFileSystem, fileInfo);
   }
 
   private GoogleCloudStorageInputStream(
-      GcsFileSystem gcsFileSystem, VectoredSeekableByteChannel channel, URI path)
-      throws IOException {
+      GcsFileSystem gcsFileSystem, VectoredSeekableByteChannel channel, GcsFileInfo gcsFileInfo) {
     this.gcsFileSystem = gcsFileSystem;
     this.channel = channel;
     this.position = 0;
-    this.gcsPath = path;
+    this.gcsPath = gcsFileInfo.getUri();
+    this.gcsFileInfo = gcsFileInfo;
     this.prefetchSize =
         gcsFileSystem
             .getFileSystemOptions()
             .getGcsClientOptions()
             .getGcsReadOptions()
             .getFooterPrefetchSize();
-    if (channel != null) {
-      this.fileSize = channel.size();
-    } else {
-      fileSize = 0;
-    }
+    this.fileSize = gcsFileInfo.getItemInfo().getSize();
   }
 
   // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
@@ -167,10 +172,10 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
     long channelPosition = channel.position();
     checkState(
-            channelPosition == position,
-            "Channel position (%s) and stream position (%s) should be the same",
-            channelPosition,
-            position);
+        channelPosition == position,
+        "Channel position (%s) and stream position (%s) should be the same",
+        channelPosition,
+        position);
 
     int bytesRead = channel.read(byteBuffer);
     if (bytesRead > 0) {
@@ -213,7 +218,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
     try (VectoredSeekableByteChannel byteChannel =
         gcsFileSystem.open(
-            gcsPath,
+            gcsFileInfo,
             gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
       byteChannel.position(position);
       int numberOfBytesRead = byteChannel.read(ByteBuffer.wrap(buffer, offset, length));
@@ -230,9 +235,8 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int readTail(byte[] buffer, int offset, int length) throws IOException {
     try (VectoredSeekableByteChannel byteChannel =
         gcsFileSystem.open(
-            gcsPath,
+            gcsFileInfo,
             gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions())) {
-      GcsFileInfo gcsFileInfo = gcsFileSystem.getFileInfo(gcsPath);
       long size = gcsFileInfo.getItemInfo().getSize();
       long startPosition = Math.max(0, size - offset);
       byteChannel.position(startPosition);

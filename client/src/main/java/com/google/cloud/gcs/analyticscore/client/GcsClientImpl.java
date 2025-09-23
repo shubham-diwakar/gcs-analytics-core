@@ -57,13 +57,15 @@ class GcsClientImpl implements GcsClient {
   }
 
   @Override
-  public VectoredSeekableByteChannel openReadChannel(GcsItemId itemId, GcsReadOptions readOptions)
-      throws IOException {
-    checkNotNull(itemId);
-    checkArgument(itemId.isGcsObject(), "Expected GCS object to be provided. But got: " + itemId);
-    GcsItemInfo itemInfo = getGcsItemInfo(itemId);
+  public VectoredSeekableByteChannel openReadChannel(
+      GcsItemInfo gcsItemInfo, GcsReadOptions readOptions) throws IOException {
+    checkNotNull(gcsItemInfo, "itemInfo should not be null");
+    checkNotNull(readOptions, "readOptions should not be null");
+    checkArgument(
+        gcsItemInfo.getItemId().isGcsObject(),
+        "Expected GCS object to be provided. But got: " + gcsItemInfo.getItemId());
 
-    return new GcsReadChannel(storage, itemInfo, readOptions, executorServiceSupplier);
+    return new GcsReadChannel(storage, gcsItemInfo, readOptions, executorServiceSupplier);
   }
 
   @Override
