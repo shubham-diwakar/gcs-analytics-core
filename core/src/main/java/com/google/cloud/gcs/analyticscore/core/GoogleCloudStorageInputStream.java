@@ -44,12 +44,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
   private volatile boolean closed;
 
-  // Footer cache fields
-  private volatile ByteBuffer footerCache;
+  // Unified cache for small objects or footers.
   private final long prefetchSize;
-
-  // Small object cache
-  private volatile ByteBuffer smallObjectCache;
+  private volatile ByteBuffer prefetchBuffer;
+  private volatile boolean isFullObjectCached;
+  private final boolean smallObjectCacheEnabled;
 
   public static GoogleCloudStorageInputStream create(
       GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
@@ -75,12 +74,10 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     this.position = 0;
     this.gcsPath = gcsFileInfo.getUri();
     this.gcsFileInfo = gcsFileInfo;
-    this.prefetchSize =
-        gcsFileSystem
-            .getFileSystemOptions()
-            .getGcsClientOptions()
-            .getGcsReadOptions()
-            .getFooterPrefetchSize();
+    GcsReadOptions readOptions =
+        gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions();
+    this.prefetchSize = readOptions.getFooterPrefetchSize();
+    this.smallObjectCacheEnabled = readOptions.isSmallObjectCache();
     this.fileSize = gcsFileInfo.getItemInfo().getSize();
   }
 
@@ -89,7 +86,7 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     long originalPosition = -1;
     try {
       originalPosition = getPos();
-      if (prefetchSize >= fileSize) {
+      if (smallObjectCacheEnabled && fileSize > 0 && prefetchSize >= fileSize) {
         // For small files, cache the entire object.
         LOG.debug(
             "File size ({}) is smaller than or equal to prefetch size ({}). Caching the whole object.",
@@ -105,9 +102,10 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
           }
         }
         smallObjectByteBuffer.flip();
-        this.smallObjectCache = smallObjectByteBuffer;
-        LOG.debug("Cached {} bytes of small object for {}", smallObjectCache.remaining(), gcsPath);
-      } else {
+        this.prefetchBuffer = smallObjectByteBuffer;
+        this.isFullObjectCached = true;
+        LOG.debug("Cached {} bytes of small object for {}", prefetchBuffer.remaining(), gcsPath);
+      } else if (prefetchSize > 0 && fileSize > prefetchSize) {
         // Otherwise cache the footer.
         long footerCacheStartPosition = fileSize - prefetchSize;
         LOG.debug(
@@ -125,8 +123,9 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
           }
         }
         footerByteBuffer.flip();
-        this.footerCache = footerByteBuffer;
-        LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
+        this.prefetchBuffer = footerByteBuffer;
+        this.isFullObjectCached = false;
+        LOG.debug("Cached {} bytes of footer for {}", prefetchBuffer.remaining(), gcsPath);
       }
     } catch (IOException e) {
       // Log the error but don't fail the operation as this improves performance. The read will fall
@@ -140,26 +139,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     }
   }
 
-  private int serveFromFooterCache(ByteBuffer buffer) throws IOException {
-    long footerCacheStartPosition = fileSize - prefetchSize;
-    ByteBuffer cacheView = footerCache.duplicate();
-    cacheView.position((int) (position - footerCacheStartPosition));
-    if (!cacheView.hasRemaining()) {
-      // Signal End of stream.
-      return -1;
-    }
-    int bytesToRead = Math.min(buffer.remaining(), cacheView.remaining());
-    if (bytesToRead > 0) {
-      cacheView.limit(cacheView.position() + bytesToRead);
-      buffer.put(cacheView);
-    }
-    seek(position + bytesToRead);
-    return bytesToRead;
-  }
-
-  private int serveFromSmallObjectCache(ByteBuffer buffer) throws IOException {
-    ByteBuffer cacheView = smallObjectCache.duplicate();
-    cacheView.position((int) position);
+  private int serveFromCache(ByteBuffer buffer) throws IOException {
+    ByteBuffer cacheView = prefetchBuffer.duplicate();
+    int cachePosition =
+        isFullObjectCached ? (int) position : (int) (position - (fileSize - prefetchSize));
+    cacheView.position(cachePosition);
     if (!cacheView.hasRemaining()) {
       // Signal End of stream.
       return -1;
@@ -200,18 +184,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int read(ByteBuffer byteBuffer) throws IOException {
     checkNotClosed("Cannot read: already closed");
 
-    if (smallObjectCache == null
-        && footerCache == null
-        && prefetchSize > 0
-        && position >= fileSize - prefetchSize) {
+    if (prefetchBuffer == null && prefetchSize > 0 && position >= fileSize - prefetchSize) {
       cacheSmallObjectOrFooter();
     }
-    if (smallObjectCache != null) {
-      return serveFromSmallObjectCache(byteBuffer);
-    }
-    // If the footer is cached and the read is within its range, serve from the cache.
-    if (footerCache != null && position >= fileSize - prefetchSize) {
-      return serveFromFooterCache(byteBuffer);
+    if (prefetchBuffer != null && (isFullObjectCached || (position >= fileSize - prefetchSize))) {
+      return serveFromCache(byteBuffer);
     }
 
     long channelPosition = channel.position();

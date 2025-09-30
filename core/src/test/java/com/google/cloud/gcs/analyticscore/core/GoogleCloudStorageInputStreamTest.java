@@ -160,7 +160,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_singleByte_fromFooter_servesFromCache() throws IOException {
+  void read_singleByte_fromCache_servesFromCache() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -281,7 +281,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_fromFooterWhenCacheReadFails_fallsBackToMainChannel() throws IOException {
+  void read_fromCacheWhenCacheReadFails_fallsBackToMainChannel() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -329,7 +329,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_fromFooterWithUnexpectedEof_readsPartialCache() throws IOException {
+  void read_fromCacheWithUnexpectedEof_readsPartialCache() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -357,7 +357,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_outsideFromFooter_withSimulatedPositionError() throws IOException {
+  void read_outsideOfCache_withSimulatedPositionError() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -693,7 +693,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void cacheFooter_whenRestorePositionFails_propagatesException() throws IOException {
+  void cache_whenRestorePositionFails_propagatesException() throws IOException {
     GcsReadOptions readOptions =
         GcsReadOptions.builder().setFooterPrefetchSize(prefetchSize).build();
     when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
@@ -725,7 +725,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_whenFileSizeIsLessThanPrefetchSize_cachesSmallObject() throws IOException {
+  void read_whenFileSizeIsLessThanPrefetchSize_cachesFullObject() throws IOException {
     long smallFileSize = prefetchSize - 1;
     when(mockGcsItemInfo.getSize()).thenReturn(smallFileSize);
     GcsReadOptions readOptions =
@@ -763,7 +763,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_whenFileSizeIsEqualToPrefetchSize_cachesSmallObject() throws IOException {
+  void read_whenFileSizeIsEqualToPrefetchSize_cachesFullObject() throws IOException {
     long smallFileSize = prefetchSize;
     when(mockGcsItemInfo.getSize()).thenReturn(smallFileSize);
     GcsReadOptions readOptions =
@@ -809,7 +809,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void seek_inSmallObjectCache_readsCorrectData() throws IOException {
+  void seek_inFullObjectCache_readsCorrectData() throws IOException {
     long smallFileSize = prefetchSize;
     when(mockGcsItemInfo.getSize()).thenReturn(smallFileSize);
     GcsReadOptions readOptions =
@@ -840,7 +840,7 @@ class GoogleCloudStorageInputStreamTest {
   }
 
   @Test
-  void read_pastEndOfSmallObjectCache_returnsEof() throws IOException {
+  void read_pastEndOfFullObjectCache_returnsEof() throws IOException {
     long smallFileSize = prefetchSize;
     when(mockGcsItemInfo.getSize()).thenReturn(smallFileSize);
     GcsReadOptions readOptions =
@@ -869,5 +869,35 @@ class GoogleCloudStorageInputStreamTest {
     // Read with buffer at EOF
     int bytesRead = googleCloudStorageInputStream.read(new byte[1], 0, 1);
     assertThat(bytesRead).isEqualTo(-1);
+  }
+
+  @Test
+  void read_whenSmallObjectCachingIsDisabled_doesNotCacheForSmallFile() throws IOException {
+    // 1. Setup: A file small enough for caching, but the option is disabled.
+    long smallFileSize = prefetchSize - 1;
+    when(mockGcsItemInfo.getSize()).thenReturn(smallFileSize);
+    GcsReadOptions readOptions =
+        GcsReadOptions.builder()
+            .setSmallObjectCache(false) // Disable the cache
+            .setFooterPrefetchSize(prefetchSize)
+            .build();
+    when(mockClientOptions.getGcsReadOptions()).thenReturn(readOptions);
+    when(mockFileSystem.open(eq(mockGcsFileInfo), eq(readOptions))).thenReturn(mockChannel);
+
+    // Mock channel reads and positions.
+    when(mockChannel.read(any(ByteBuffer.class))).thenReturn(1);
+    when(mockChannel.position()).thenReturn(0L).thenReturn(1L);
+
+    googleCloudStorageInputStream = GoogleCloudStorageInputStream.create(mockFileSystem, testUri);
+
+    // 2. Execution: Read from the stream twice.
+    googleCloudStorageInputStream.read();
+    googleCloudStorageInputStream.read();
+
+    // 3. Verification:
+    // Verify that the underlying channel was read from twice, proving no cache was used.
+    verify(mockChannel, times(2)).read(any(ByteBuffer.class));
+    // Crucially, verify that no incorrect attempt was made to position for a footer cache.
+    verify(mockChannel, never()).position(smallFileSize - prefetchSize);
   }
 }
