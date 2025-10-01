@@ -36,7 +36,7 @@ class GcsReadOptionsTest {
             .put("fs.gs.vectored.read.min.range.seek.size", "1024")
             .put("fs.gs.vectored.read.merged.range.max.size", "2048")
             .put("fs.gs.footer.prefetch.size", "4194304")
-            .put("fs.gs.small.object.cache", "false")
+            .put("fs.gs.footer.prefetch.small-object-caching.enabled", "false")
             .build();
     String prefix = "fs.gs.";
 

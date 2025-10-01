@@ -26,7 +26,8 @@ public abstract class GcsReadOptions {
   private static final String DECRYPTION_KEY_KEY = "decryption.key";
   private static final String PROJECT_ID_KEY = "project.id";
   private static final String FOOTER_PREFETCH_SIZE = "footer.prefetch.size";
-  private static final String SMALL_OBJECT_CACHE_KEY = "small.object.cache";
+  private static final String SMALL_OBJECT_CACHE_KEY =
+      "footer.prefetch.small-object-caching.enabled";
 
   private static final long DEFAULT_FOOTER_PREFETCH_SIZE = 2097152; // 2mb
   private static final boolean DEFAULT_SMALL_OBJECT_CACHE = true;
