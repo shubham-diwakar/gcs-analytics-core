@@ -26,4 +26,7 @@ public class ParquetFooterPrefetchState {
     // 0KB ie: Disabled, 50KB, 100KB, 200KB, 500KB, 1MB, 2MB
     @Param({ "0", "51200", "102400", "204800", "512000", "1048576", "2097152" })
     public int footerPrefetchSize;
+
+    @Param({"true", "false"})
+    public boolean smallObjectCache;
 }

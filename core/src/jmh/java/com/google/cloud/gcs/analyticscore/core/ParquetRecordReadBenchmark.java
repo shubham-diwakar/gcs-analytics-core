@@ -54,7 +54,7 @@ public class ParquetRecordReadBenchmark {
                 + "optional binary c_email_address (STRING);\n"
                 + "}";
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_SMALL_FILE);
-        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize);
+        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize, true);
     }
 
     @Benchmark
@@ -70,7 +70,7 @@ public class ParquetRecordReadBenchmark {
                 + "optional binary c_email_address (STRING);\n"
                 + "}";
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_MEDIUM_FILE);
-        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize);
+        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize, true);
     }
 
     @Benchmark
@@ -86,7 +86,7 @@ public class ParquetRecordReadBenchmark {
                 + "optional binary c_email_address (STRING);\n"
                 + "}";
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_LARGE_FILE);
-        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize);
+        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize, true);
     }
 
     @Benchmark
@@ -102,6 +102,6 @@ public class ParquetRecordReadBenchmark {
                 + "optional binary c_email_address (STRING);\n"
                 + "}";
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(TPCDS_CUSTOMER_XLARGE_FILE);
-        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize);
+        ParquetHelper.readParquetObjectRecords(uri, requestedSchema, state.enableVectoredRead, state.footerPrefetchSize, true);
     }
 }

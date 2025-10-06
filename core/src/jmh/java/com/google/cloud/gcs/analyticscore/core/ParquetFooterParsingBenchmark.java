@@ -38,7 +38,7 @@ public class ParquetFooterParsingBenchmark {
     @Fork(value = 2, warmups = 1)
     public void smallFile(ParquetFooterPrefetchState state) throws IOException {
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_SMALL_FILE);
-        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize);
+        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize, state.smallObjectCache);
     }
 
     @Benchmark
@@ -49,7 +49,7 @@ public class ParquetFooterParsingBenchmark {
     @Fork(value = 2, warmups = 1)
     public void mediumFile(ParquetFooterPrefetchState state) throws IOException {
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_MEDIUM_FILE);
-        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize);
+        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize, state.smallObjectCache);
     }
 
     @Benchmark
@@ -60,6 +60,6 @@ public class ParquetFooterParsingBenchmark {
     @Fork(value = 2, warmups = 1)
     public void largeFile(ParquetFooterPrefetchState state) throws IOException {
         URI uri = IntegrationTestHelper.getGcsObjectUriForFile(IntegrationTestHelper.TPCDS_CUSTOMER_LARGE_FILE);
-        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize);
+        ParquetHelper.readParquetMetadata(uri, state.footerPrefetchSize, state.smallObjectCache);
     }
 }

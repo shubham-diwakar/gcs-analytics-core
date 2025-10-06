@@ -107,7 +107,7 @@ public class IntegrationTestHelper {
         uploadParquetFileIfNotExists(writer, TPCDS_CUSTOMER_LARGE_FILE, 10000000, "large");
     }
 
-    private static void uploadParquetFileIfNotExists(
+    public static void uploadParquetFileIfNotExists(
             TpcdsCustomerParquetWriter writer, String fileName, int recordCount, String sizeLabel)
             throws IOException {
         if (!IntegrationTestHelper.objectPresentInBucket(fileName)) {
