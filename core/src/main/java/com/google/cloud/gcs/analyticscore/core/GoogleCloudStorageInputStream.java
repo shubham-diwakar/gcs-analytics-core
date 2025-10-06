@@ -44,9 +44,10 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
 
   private volatile boolean closed;
 
-  // Footer cache fields
-  private volatile ByteBuffer footerCache;
+  // Unified cache for small objects or footers.
   private final long prefetchSize;
+  private volatile ByteBuffer prefetchBuffer;
+  private final boolean smallObjectCacheEnabled;
 
   public static GoogleCloudStorageInputStream create(
       GcsFileSystem gcsFileSystem, GcsFileInfo gcsFileInfo) throws IOException {
@@ -79,20 +80,19 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
       this.prefetchSize = 0;
     } else if (fileSize > 1024 * 1024 * 1024) {
       // If file size is greater than 1GB, then LargeFile else small file.
-      this.prefetchSize = readOptions.getFooterPrefetchSizeLargeFile();
+      this.prefetchSize = Math.min(readOptions.getFooterPrefetchSizeLargeFile(),fileSize);
     } else {
-      this.prefetchSize = readOptions.getFooterPrefetchSizeSmallFile();
+      this.prefetchSize = Math.min(readOptions.getFooterPrefetchSizeSmallFile(),fileSize);
     }
+    this.smallObjectCacheEnabled = readOptions.isSmallObjectCache();
   }
 
   // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.
-  private void cacheFooter() throws IOException {
+  private void cacheSmallObjectOrFooter() throws IOException {
     long originalPosition = -1;
     try {
       originalPosition = getPos();
-      // File is too small to store footer.
-      // TODO(shubhamdiwakar): Implement Small object caching.
-      if (prefetchSize >= fileSize) {
+      if (!smallObjectCacheEnabled && prefetchSize == fileSize) {
         return;
       }
       long footerCacheStartPosition = fileSize - prefetchSize;
@@ -111,8 +111,8 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
         }
       }
       footerByteBuffer.flip();
-      this.footerCache = footerByteBuffer;
-      LOG.debug("Cached {} bytes of footer for {}", footerCache.remaining(), gcsPath);
+      this.prefetchBuffer = footerByteBuffer;
+      LOG.debug("Cached {} bytes of footer for {}", prefetchBuffer.remaining(), gcsPath);
     } catch (IOException e) {
       // Log the error but don't fail the operation as this improves performance. The read will fall
       // back to the main channel.
@@ -125,11 +125,14 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     }
   }
 
-  private int serveFromFooterCache(ByteBuffer buffer) throws IOException {
-    // TODO(shubhamdiwakar): Refactor to use GcsFileInfo instead of fileSize.
-    long footerCacheStartPosition = fileSize - prefetchSize;
-    ByteBuffer cacheView = footerCache.duplicate();
-    cacheView.position((int) (position - footerCacheStartPosition));
+  private int serveFromCache(ByteBuffer buffer) throws IOException {
+    ByteBuffer cacheView = prefetchBuffer.duplicate();
+    int cachePosition = (int) (position - (fileSize - prefetchSize));
+    cacheView.position(cachePosition);
+    if (!cacheView.hasRemaining()) {
+      // Signal End of stream.
+      return -1;
+    }
     int bytesToRead = Math.min(buffer.remaining(), cacheView.remaining());
     if (bytesToRead > 0) {
       cacheView.limit(cacheView.position() + bytesToRead);
@@ -166,12 +169,11 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
   public int read(ByteBuffer byteBuffer) throws IOException {
     checkNotClosed("Cannot read: already closed");
 
-    if (footerCache == null && prefetchSize > 0 && position >= fileSize - prefetchSize) {
-      cacheFooter();
+    if (prefetchBuffer == null && prefetchSize > 0 && position >= fileSize - prefetchSize) {
+      cacheSmallObjectOrFooter();
     }
-    // If the footer is cached and the read is within its range, serve from the cache.
-    if (footerCache != null && position >= fileSize - prefetchSize) {
-      return serveFromFooterCache(byteBuffer);
+    if (prefetchBuffer != null && (position >= fileSize - prefetchSize)) {
+      return serveFromCache(byteBuffer);
     }
 
     long channelPosition = channel.position();
