@@ -73,10 +73,17 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     this.position = 0;
     this.gcsPath = gcsFileInfo.getUri();
     this.gcsFileInfo = gcsFileInfo;
+    this.fileSize = gcsFileInfo.getItemInfo().getSize();
     GcsReadOptions readOptions =
         gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions();
-    this.fileSize = gcsFileInfo.getItemInfo().getSize();
-    this.prefetchSize = Math.min(readOptions.getFooterPrefetchSize(), fileSize);
+    if (!readOptions.isFooterPrefetchEnabled()) {
+      this.prefetchSize = 0;
+    } else if (fileSize > 1024 * 1024 * 1024) {
+      // If file size is greater than 1GB, then LargeFile else small file.
+      this.prefetchSize = Math.min(readOptions.getFooterPrefetchSizeLargeFile(),fileSize);
+    } else {
+      this.prefetchSize = Math.min(readOptions.getFooterPrefetchSizeSmallFile(),fileSize);
+    }
     this.smallObjectCacheEnabled = readOptions.isSmallObjectCache();
   }
 
