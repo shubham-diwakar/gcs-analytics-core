@@ -67,9 +67,9 @@ public class ParquetHelper {
      * @return The ParquetMetadata object.
      * @throws IOException if an I/O error occurs while reading the file.
      */
-    public static ParquetMetadata readParquetMetadata(URI fileUri, int footerPrefetchSize) throws IOException {
+    public static ParquetMetadata readParquetMetadata(URI fileUri, int footerPrefetchSize, boolean smallObjectCache) throws IOException {
         logger.info("Reading parquet file metadata: {} with footerPrefetchSize: {}", fileUri, footerPrefetchSize);
-        InputFile inputFile = new TestInputStreamInputFile(fileUri, false, footerPrefetchSize);
+        InputFile inputFile = new TestInputStreamInputFile(fileUri, false, footerPrefetchSize, smallObjectCache);
         // Configuration can be customized if needed
         Configuration conf = new Configuration();
         try (ParquetFileReader reader = ParquetFileReader.open(inputFile)) {
@@ -85,8 +85,8 @@ public class ParquetHelper {
      * @return The total number of records in the file.
      */
 
-    public static long readParquetObjectRecords(URI fileUri, boolean readVectoredEnabled, int footerPrefetchSize)  {
-        return readParquetObjectRecords(fileUri, null, readVectoredEnabled, footerPrefetchSize);
+    public static long readParquetObjectRecords(URI fileUri, boolean readVectoredEnabled, int footerPrefetchSize, boolean smallObjectCache)  {
+        return readParquetObjectRecords(fileUri, null, readVectoredEnabled, footerPrefetchSize, smallObjectCache);
     }
 
     /**
@@ -98,10 +98,10 @@ public class ParquetHelper {
      * @param footerPrefetchSize Size of footer prefetch buffer, 0 to disable footer prefetching.
      * @return The total number of records in the file.
      */
-    public static long readParquetObjectRecords(URI fileUri, String requestedSchema, boolean readVectoredEnabled, int footerPrefetchSize)  {
+    public static long readParquetObjectRecords(URI fileUri, String requestedSchema, boolean readVectoredEnabled, int footerPrefetchSize, boolean smallObjectCache)  {
         logger.info("Reading parquet file:{} with footerPrefetchSize={} vectoredIOEnabled={}", fileUri, footerPrefetchSize, readVectoredEnabled);
         try {
-            InputFile inputFile = new TestInputStreamInputFile(fileUri, readVectoredEnabled, footerPrefetchSize);
+            InputFile inputFile = new TestInputStreamInputFile(fileUri, readVectoredEnabled, footerPrefetchSize,smallObjectCache);
 
             long recordCount = 0;
             Configuration conf = new Configuration();

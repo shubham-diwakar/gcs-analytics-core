@@ -53,7 +53,7 @@ class GoogleCloudStorageInputStreamIntegrationTest {
                   IntegrationTestHelper.TPCDS_CUSTOMER_LARGE_FILE})
   void forSampleParquetFiles_vectoredIOEnabled_readsFileSuccessfully(String fileName) {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
-    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ true, /* footerPrefetchSize= */ 0);
+    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ true, /* footerPrefetchSize= */ 0,/* smallObjectCache= */ true);
   }
 
   @ParameterizedTest
@@ -63,7 +63,7 @@ class GoogleCloudStorageInputStreamIntegrationTest {
                   IntegrationTestHelper.TPCDS_CUSTOMER_LARGE_FILE})
   void forSampleParquetFiles_vectoredIOEnabled_footerPrefetchingEnabled_readsFileSuccessfully(String fileName) {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
-    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ true, /* footerPrefetchSize= */ 102400);
+    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ true, /* footerPrefetchSize= */ 102400,/* smallObjectCache= */ true);
   }
 
   @ParameterizedTest
@@ -73,7 +73,7 @@ class GoogleCloudStorageInputStreamIntegrationTest {
                   IntegrationTestHelper.TPCDS_CUSTOMER_LARGE_FILE})
   void forSampleParquetFiles_vectoredIODisabled_readsFileSuccessfully(String fileName) {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
-    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ false, /* footerPrefetchSize= */ 0);
+    ParquetHelper.readParquetObjectRecords(uri, /* readVectoredEnabled= */ false, /* footerPrefetchSize= */ 0, /* smallObjectCache= */ true);
   }
 
   @ParameterizedTest
@@ -84,7 +84,7 @@ class GoogleCloudStorageInputStreamIntegrationTest {
   void tpcdsCustomerTableData_footerPrefetchingEnabled_parsesParquetSchemaCorrectly(String fileName) throws IOException {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
 
-    ParquetMetadata metadata = ParquetHelper.readParquetMetadata(uri, /* footerPrefetchSize= */ 102400);
+    ParquetMetadata metadata = ParquetHelper.readParquetMetadata(uri, /* footerPrefetchSize= */ 102400,/* smallObjectCache= */ true);
 
     List<ColumnDescriptor> columnDescriptorsList = metadata.getFileMetaData().getSchema().getColumns();
     for(ColumnDescriptor descriptor : ParquetHelper.TPCDS_CUSTOMER_TABLE_COLUMNS) {
@@ -101,7 +101,7 @@ class GoogleCloudStorageInputStreamIntegrationTest {
   void tpcdsCustomerTableData_footerPrefetchingDisabled_parsesParquetSchemaCorrectly(String fileName) throws IOException {
     URI uri = IntegrationTestHelper.getGcsObjectUriForFile(fileName);
 
-    ParquetMetadata metadata = ParquetHelper.readParquetMetadata(uri, /* footerPrefetchSize= */ 0);
+    ParquetMetadata metadata = ParquetHelper.readParquetMetadata(uri, /* footerPrefetchSize= */ 0,/* smallObjectCache= */ false);
 
     List<ColumnDescriptor> columnDescriptorsList = metadata.getFileMetaData().getSchema().getColumns();
     for(ColumnDescriptor descriptor : ParquetHelper.TPCDS_CUSTOMER_TABLE_COLUMNS) {

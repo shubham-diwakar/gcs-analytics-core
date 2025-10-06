@@ -30,10 +30,10 @@ public class TestInputStreamInputFile implements InputFile {
     private final boolean enableVectoredIO;
     private Long size;
 
-    public TestInputStreamInputFile(URI filePath, boolean enableVectoredIO, int footerPrefetchSize) throws IOException {
+    public TestInputStreamInputFile(URI filePath, boolean enableVectoredIO, int footerPrefetchSize, boolean smallObjectCache) throws IOException {
         this.enableVectoredIO = enableVectoredIO;
         this.fileUri = filePath;
-        GcsReadOptions gcsReadOptions = GcsReadOptions.builder().setFooterPrefetchSize(footerPrefetchSize).build();
+        GcsReadOptions gcsReadOptions = GcsReadOptions.builder().setFooterPrefetchSize(footerPrefetchSize).setSmallObjectCache(smallObjectCache).build();
         GcsFileSystemOptions gcsFileSystemOptions = GcsFileSystemOptions.builder().setGcsClientOptions(
                 GcsClientOptions.builder().setGcsReadOptions(gcsReadOptions).build()
         ).build();
