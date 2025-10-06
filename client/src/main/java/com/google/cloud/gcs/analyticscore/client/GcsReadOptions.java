@@ -25,9 +25,16 @@ public abstract class GcsReadOptions {
   private static final String GCS_CHANNEL_READ_CHUNK_SIZE_KEY = "channel.read.chunk-size-bytes";
   private static final String DECRYPTION_KEY_KEY = "decryption.key";
   private static final String PROJECT_ID_KEY = "project.id";
-  private static final String FOOTER_PREFETCH_SIZE = "footer.prefetch.size";
+  private static final String FOOTER_PREFETCH_ENABLED_KEY = "footer.prefetch.enabled";
+  private static final String FOOTER_PREFETCH_SIZE = "footer.prefetch.size.small-file";
+  private static final String FOOTER_PREFETCH_SIZE_LARGE_FILE = "footer.prefetch.size.large-file";
+  private static final String SMALL_OBJECT_CACHE_KEY =
+      "footer.prefetch.small-object-caching.enabled";
 
-  private static final long DEFAULT_FOOTER_PREFETCH_SIZE = 2097152; // 2mb
+  private static final boolean DEFAULT_FOOTER_PREFETCH_ENABLED = true;
+  private static final long DEFAULT_FOOTER_PREFETCH_SIZE_SMALL_FILE = 100 * 1024; // 100kb
+  private static final long DEFAULT_FOOTER_PREFETCH_SIZE_LARGE_FILE = 1024 * 1024; // 1mb
+  private static final boolean DEFAULT_SMALL_OBJECT_CACHE = true;
 
   public abstract Optional<Integer> getChunkSize();
 
@@ -35,14 +42,23 @@ public abstract class GcsReadOptions {
 
   public abstract Optional<String> getProjectId();
 
-  public abstract long getFooterPrefetchSize();
+  public abstract long getFooterPrefetchSizeSmallFile();
+
+  public abstract long getFooterPrefetchSizeLargeFile();
+
+  public abstract boolean isFooterPrefetchEnabled();
+
+  public abstract boolean isSmallObjectCache();
 
   public abstract GcsVectoredReadOptions getGcsVectoredReadOptions();
 
   public static Builder builder() {
     return new AutoValue_GcsReadOptions.Builder()
         .setGcsVectoredReadOptions(GcsVectoredReadOptions.builder().build())
-        .setFooterPrefetchSize(DEFAULT_FOOTER_PREFETCH_SIZE);
+        .setFooterPrefetchEnabled(DEFAULT_FOOTER_PREFETCH_ENABLED)
+        .setFooterPrefetchSizeSmallFile(DEFAULT_FOOTER_PREFETCH_SIZE_SMALL_FILE)
+        .setFooterPrefetchSizeLargeFile(DEFAULT_FOOTER_PREFETCH_SIZE_LARGE_FILE)
+        .setSmallObjectCache(DEFAULT_SMALL_OBJECT_CACHE);
   }
 
   public static GcsReadOptions createFromOptions(
@@ -58,16 +74,37 @@ public abstract class GcsReadOptions {
     if (analyticsCoreOptions.containsKey(prefix + PROJECT_ID_KEY)) {
       optionsBuilder.setProjectId(analyticsCoreOptions.get(prefix + PROJECT_ID_KEY));
     }
+    if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_ENABLED_KEY)) {
+      optionsBuilder.setFooterPrefetchEnabled(
+          Boolean.parseBoolean(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_ENABLED_KEY)));
+    }
     if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_SIZE)) {
-      long prefetchSize = Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE));
-      if (prefetchSize > Integer.MAX_VALUE) {
+      long prefetchSizeSmallFile =
+          Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE));
+      if (prefetchSizeSmallFile > Integer.MAX_VALUE) {
         throw new IllegalArgumentException(
             String.format(
-                "prefetchSize (%d) cannot be greater than Integer.MAX_VALUE (%d)",
-                prefetchSize, Integer.MAX_VALUE));
+                "prefetchSizeForSmallFile (%d) cannot be greater than Integer.MAX_VALUE (%d)",
+                prefetchSizeSmallFile, Integer.MAX_VALUE));
       } else {
-        optionsBuilder.setFooterPrefetchSize(prefetchSize);
+        optionsBuilder.setFooterPrefetchSizeSmallFile(prefetchSizeSmallFile);
       }
+    }
+    if (analyticsCoreOptions.containsKey(prefix + FOOTER_PREFETCH_SIZE_LARGE_FILE)) {
+      long prefetchSizeLargeFile =
+          Long.parseLong(analyticsCoreOptions.get(prefix + FOOTER_PREFETCH_SIZE_LARGE_FILE));
+      if (prefetchSizeLargeFile > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException(
+            String.format(
+                "prefetchSizeForLargeFile (%d) cannot be greater than Integer.MAX_VALUE (%d)",
+                prefetchSizeLargeFile, Integer.MAX_VALUE));
+      } else {
+        optionsBuilder.setFooterPrefetchSizeLargeFile(prefetchSizeLargeFile);
+      }
+    }
+    if (analyticsCoreOptions.containsKey(prefix + SMALL_OBJECT_CACHE_KEY)) {
+      optionsBuilder.setSmallObjectCache(
+          Boolean.parseBoolean(analyticsCoreOptions.get(prefix + SMALL_OBJECT_CACHE_KEY)));
     }
     optionsBuilder.setGcsVectoredReadOptions(
         GcsVectoredReadOptions.createFromOptions(analyticsCoreOptions, prefix));
@@ -87,7 +124,13 @@ public abstract class GcsReadOptions {
 
     public abstract Builder setGcsVectoredReadOptions(GcsVectoredReadOptions vectoredReadOptions);
 
-    public abstract Builder setFooterPrefetchSize(long footerPrefetchSize);
+    public abstract Builder setFooterPrefetchEnabled(boolean footerPrefetchEnabled);
+
+    public abstract Builder setFooterPrefetchSizeSmallFile(long footerPrefetchSizeSmallFile);
+
+    public abstract Builder setFooterPrefetchSizeLargeFile(long footerPrefetchSizeLargeFile);
+
+    public abstract Builder setSmallObjectCache(boolean smallObjectCache);
 
     public abstract GcsReadOptions build();
   }

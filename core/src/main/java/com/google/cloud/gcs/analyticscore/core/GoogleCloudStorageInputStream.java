@@ -72,13 +72,17 @@ public class GoogleCloudStorageInputStream extends SeekableInputStream {
     this.position = 0;
     this.gcsPath = gcsFileInfo.getUri();
     this.gcsFileInfo = gcsFileInfo;
-    this.prefetchSize =
-        gcsFileSystem
-            .getFileSystemOptions()
-            .getGcsClientOptions()
-            .getGcsReadOptions()
-            .getFooterPrefetchSize();
     this.fileSize = gcsFileInfo.getItemInfo().getSize();
+    GcsReadOptions readOptions =
+        gcsFileSystem.getFileSystemOptions().getGcsClientOptions().getGcsReadOptions();
+    if (!readOptions.isFooterPrefetchEnabled()) {
+      this.prefetchSize = 0;
+    } else if (fileSize > 1024 * 1024 * 1024) {
+      // If file size is greater than 1GB, then LargeFile else small file.
+      this.prefetchSize = readOptions.getFooterPrefetchSizeLargeFile();
+    } else {
+      this.prefetchSize = readOptions.getFooterPrefetchSizeSmallFile();
+    }
   }
 
   // TODO(shubhamdiwakar): Performance test the lazy seek approach with a separate channel.

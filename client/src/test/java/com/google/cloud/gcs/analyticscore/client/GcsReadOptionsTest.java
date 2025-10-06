@@ -35,7 +35,10 @@ class GcsReadOptionsTest {
             .put("fs.gs.project.id", "test-project")
             .put("fs.gs.vectored.read.min.range.seek.size", "1024")
             .put("fs.gs.vectored.read.merged.range.max.size", "2048")
-            .put("fs.gs.footer.prefetch.size", "4194304")
+            .put("fs.gs.footer.prefetch.enabled", "false")
+            .put("fs.gs.footer.prefetch.size.large-file", "4194304")
+            .put("fs.gs.footer.prefetch.size.small-file", "41943")
+            .put("fs.gs.footer.prefetch.small-object-caching.enabled", "false")
             .build();
     String prefix = "fs.gs.";
 
@@ -45,7 +48,10 @@ class GcsReadOptionsTest {
     assertThat(readOptions.getChunkSize()).isEqualTo(Optional.of(8192));
     assertThat(readOptions.getDecryptionKey()).isEqualTo(Optional.of("test-key"));
     assertThat(readOptions.getProjectId()).isEqualTo(Optional.of("test-project"));
-    assertThat(readOptions.getFooterPrefetchSize()).isEqualTo(4194304);
+    assertThat(readOptions.isFooterPrefetchEnabled()).isEqualTo(false);
+    assertThat(readOptions.getFooterPrefetchSizeSmallFile()).isEqualTo(41943);
+    assertThat(readOptions.getFooterPrefetchSizeLargeFile()).isEqualTo(4194304);
+    assertThat(readOptions.isSmallObjectCache()).isFalse();
     assertThat(vectoredReadOptions.getMaxMergeGap()).isEqualTo(1024);
     assertThat(vectoredReadOptions.getMaxMergeSize()).isEqualTo(2048);
   }
@@ -61,7 +67,11 @@ class GcsReadOptionsTest {
     assertThat(readOptions.getChunkSize()).isEqualTo(Optional.empty());
     assertThat(readOptions.getDecryptionKey()).isEqualTo(Optional.empty());
     assertThat(readOptions.getProjectId()).isEqualTo(Optional.empty());
-    assertThat(readOptions.getFooterPrefetchSize()).isEqualTo(2 * 1024 * 1024); // Default value
+    assertThat(readOptions.isFooterPrefetchEnabled()).isEqualTo(true); // Default value
+    assertThat(readOptions.getFooterPrefetchSizeSmallFile()).isEqualTo(100 * 1024); // Default value
+    assertThat(readOptions.getFooterPrefetchSizeLargeFile())
+        .isEqualTo(1024 * 1024); // Default value
+    assertThat(readOptions.isSmallObjectCache()).isTrue(); // Default value
     assertThat(vectoredReadOptions.getMaxMergeGap()).isEqualTo(4 * 1024); // Default value
     assertThat(vectoredReadOptions.getMaxMergeSize()).isEqualTo(8 * 1024 * 1024); // Default value
   }
@@ -70,7 +80,7 @@ class GcsReadOptionsTest {
   void createFromOptions_withPrefetchGreaterThanIntegerMax_shouldThrowIllegalArgumentException() {
     Map<String, String> properties =
         ImmutableMap.<String, String>builder()
-            .put("fs.gs.footer.prefetch.size", "2147483648")
+            .put("fs.gs.footer.prefetch.size.small-file", "2147483648")
             .build();
     String prefix = "fs.gs.";
 
@@ -83,7 +93,29 @@ class GcsReadOptionsTest {
         .hasMessageThat()
         .isEqualTo(
             String.format(
-                "prefetchSize (%s) cannot be greater than Integer.MAX_VALUE (%d)",
+                "prefetchSizeForSmallFile (%s) cannot be greater than Integer.MAX_VALUE (%d)",
+                "2147483648", Integer.MAX_VALUE));
+  }
+
+  @Test
+  void
+      createFromOptions_withPrefetchForLargeFileGreaterThanIntegerMax_shouldThrowIllegalArgumentException() {
+    Map<String, String> properties =
+        ImmutableMap.<String, String>builder()
+            .put("fs.gs.footer.prefetch.size.large-file", "2147483648")
+            .build();
+    String prefix = "fs.gs.";
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> GcsReadOptions.createFromOptions(properties, prefix));
+
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo(
+            String.format(
+                "prefetchSizeForLargeFile (%s) cannot be greater than Integer.MAX_VALUE (%d)",
                 "2147483648", Integer.MAX_VALUE));
   }
 }

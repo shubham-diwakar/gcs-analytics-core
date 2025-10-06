@@ -33,7 +33,7 @@ public class TestInputStreamInputFile implements InputFile {
     public TestInputStreamInputFile(URI filePath, boolean enableVectoredIO, int footerPrefetchSize) throws IOException {
         this.enableVectoredIO = enableVectoredIO;
         this.fileUri = filePath;
-        GcsReadOptions gcsReadOptions = GcsReadOptions.builder().setFooterPrefetchSize(footerPrefetchSize).build();
+        GcsReadOptions gcsReadOptions = GcsReadOptions.builder().setFooterPrefetchSizeSmallFile(footerPrefetchSize).build();
         GcsFileSystemOptions gcsFileSystemOptions = GcsFileSystemOptions.builder().setGcsClientOptions(
                 GcsClientOptions.builder().setGcsReadOptions(gcsReadOptions).build()
         ).build();
