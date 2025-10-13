@@ -150,11 +150,6 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
             combinedObjectRange, underlyingRange, numOfBytesRead, dataBuffer);
       }
     } catch (Exception e) {
-      LOG.atWarn()
-          .setCause(e)
-          .log(
-              "Exception while reading combinedFileRange:%s for path: %s",
-              combinedObjectRange, itemInfo.getItemId());
       completeWithException(combinedObjectRange, e);
     }
   }
@@ -187,11 +182,6 @@ class GcsReadChannel implements VectoredSeekableByteChannel {
   private void completeWithException(GcsObjectCombinedRange combinedObjectRange, Throwable e) {
     for (GcsObjectRange child : combinedObjectRange.getUnderlyingRanges()) {
       if (!child.getByteBufferFuture().isDone()) {
-        LOG.atWarn()
-            .setCause(e)
-            .log(
-                "Marking child:%s as `completeExceptionally` of combinedRange:%s",
-                child, combinedObjectRange);
         child
             .getByteBufferFuture()
             .completeExceptionally(
